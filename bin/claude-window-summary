@@ -25,7 +25,7 @@ for f in "$BASE_DIR"/claude-window-*.cwd; do
 
   # Window no longer exists — clean up orphaned state files and skip
   if [ -z "$target" ]; then
-    rm -f "$BASE_DIR/claude-window-${key}".{cwd,stopped,total,started,completed,deleted,label,lock}
+    rm -f "$BASE_DIR/claude-window-${key}".{cwd,stopped,total,completed,deleted,label,lock}
     rmdir "$BASE_DIR/claude-window-${key}.lockd" 2>/dev/null || true
     continue
   fi
@@ -37,7 +37,7 @@ for f in "$BASE_DIR"/claude-window-*.cwd; do
   if [ -f "$stopfile" ] && [ ! -f "$BASE_DIR/claude-window-${key}.total" ]; then
     max_days="${CLAUDE_TMUX_STOPPED_MAX_DAYS:-30}"
     if [ -n "$(find "$stopfile" -mtime +"$max_days" -print 2>/dev/null)" ]; then
-      rm -f "$BASE_DIR/claude-window-${key}".{cwd,stopped,total,started,completed,deleted,label,lock}
+      rm -f "$BASE_DIR/claude-window-${key}".{cwd,stopped,total,completed,deleted,label,lock}
       rmdir "$BASE_DIR/claude-window-${key}.lockd" 2>/dev/null || true
       continue
     fi
