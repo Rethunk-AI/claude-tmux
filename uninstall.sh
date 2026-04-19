@@ -31,6 +31,7 @@ EXECUTABLES=(
   claude-window-aggregate
   claude-window-pane
   claude-tmux-log
+  claude-tmux-doctor
 )
 
 # --- 1. Remove bin symlinks ---

@@ -1,0 +1,143 @@
+#!/bin/bash
+# claude-tmux-doctor — diagnose a claude-tmux installation
+#
+# Checks:
+#   1. bash >= 4, jq, fzf, tmux, tmux >= 3.2
+#   2. flock present (or documents macOS mkdir-based fallback)
+#   3. ~/.local/bin/claude-window-* symlinks present and point at a real repo
+#   4. State dir exists and is writable
+#   5. ~/.claude/settings.json has every expected hook wired
+#   6. Required tmux options (automatic-rename on, bell-action any)
+# Exit status: 0 if all PASS or WARN only; 1 if any FAIL.
+
+set -uo pipefail
+
+PASS=0
+WARN=0
+FAIL=0
+
+pass() { printf '  \033[32mPASS\033[0m  %s\n' "$*"; PASS=$((PASS + 1)); }
+warn() { printf '  \033[33mWARN\033[0m  %s\n' "$*"; WARN=$((WARN + 1)); }
+fail() { printf '  \033[31mFAIL\033[0m  %s\n' "$*" >&2; FAIL=$((FAIL + 1)); }
+
+printf '\n== dependencies ==\n'
+if (( BASH_VERSINFO[0] >= 4 )); then
+  pass "bash ${BASH_VERSION}"
+else
+  fail "bash >= 4.0 required (detected ${BASH_VERSION}); install GNU bash"
+fi
+
+for dep in jq fzf tmux; do
+  if command -v "$dep" >/dev/null 2>&1; then
+    pass "$dep present ($(command -v "$dep"))"
+  else
+    fail "$dep missing"
+  fi
+done
+
+if command -v tmux >/dev/null 2>&1; then
+  tmux_version="$(tmux -V 2>/dev/null | awk '{print $2}')"
+  tmux_major="${tmux_version%%.*}"
+  tmux_minor="${tmux_version#*.}"; tmux_minor="${tmux_minor%%[^0-9]*}"
+  if [ "${tmux_major:-0}" -gt 3 ] || { [ "${tmux_major:-0}" -eq 3 ] && [ "${tmux_minor:-0}" -ge 2 ]; }; then
+    pass "tmux ${tmux_version} (>= 3.2)"
+  else
+    fail "tmux >= 3.2 required for display-popup (detected ${tmux_version})"
+  fi
+fi
+
+if command -v flock >/dev/null 2>&1; then
+  pass "flock present (advisory file locking for concurrent hooks)"
+else
+  warn "flock missing — falling back to mkdir-based lock (stock macOS lacks flock)"
+fi
+
+printf '\n== symlinks ==\n'
+BIN_DIR="${HOME}/.local/bin"
+EXPECTED=(
+  claude-window-init claude-window-ask claude-window-status
+  claude-window-restore claude-window-reset claude-window-subagent
+  claude-window-notify claude-window-summary claude-window-aggregate
+  claude-window-pane claude-tmux-log claude-tmux-doctor
+)
+missing_links=0
+for name in "${EXPECTED[@]}"; do
+  t="$BIN_DIR/$name"
+  if [ -L "$t" ]; then
+    target="$(readlink "$t")"
+    if [ -e "$t" ]; then
+      pass "$name → $target"
+    else
+      fail "$name symlink broken (target: $target)"
+    fi
+  elif [ -f "$t" ]; then
+    warn "$name is a regular file, not a symlink"
+  else
+    fail "$name missing from $BIN_DIR"
+    missing_links=$((missing_links + 1))
+  fi
+done
+[ "$missing_links" -gt 0 ] && warn "re-run install.sh to repair missing symlinks"
+
+printf '\n== state directory ==\n'
+STATE_DIR="${CLAUDE_TMUX_STATE_DIR:-${HOME}/.local/state/claude-tmux}"
+if [ -d "$STATE_DIR" ]; then
+  if [ -w "$STATE_DIR" ]; then
+    pass "$STATE_DIR (writable)"
+  else
+    fail "$STATE_DIR exists but is not writable"
+  fi
+else
+  warn "$STATE_DIR does not exist yet (created on first hook fire)"
+fi
+
+printf '\n== settings.json hooks ==\n'
+SETTINGS="${HOME}/.claude/settings.json"
+if [ ! -f "$SETTINGS" ]; then
+  fail "$SETTINGS not found; run install.sh"
+elif ! command -v jq >/dev/null 2>&1; then
+  warn "jq missing — cannot parse $SETTINGS"
+else
+  want=(
+    "PreToolUse:claude-window-init"
+    "PreToolUse:claude-window-ask"
+    "PostToolUse:claude-window-status"
+    "PostToolUse:claude-window-restore"
+    "Notification:claude-window-notify"
+    "SubagentStop:claude-window-subagent"
+    "Stop:claude-window-reset"
+  )
+  for entry in "${want[@]}"; do
+    event="${entry%%:*}"; cmd="${entry#*:}"
+    if jq -e --arg ev "$event" --arg cmd "$cmd" '
+      .hooks[$ev] // [] | [.[] | .hooks[]? | .command // ""]
+      | any(contains($cmd))
+    ' "$SETTINGS" >/dev/null 2>&1; then
+      pass "$event → $cmd wired"
+    else
+      fail "$event → $cmd not wired in settings.json"
+    fi
+  done
+fi
+
+printf '\n== tmux runtime options ==\n'
+if [ -n "${TMUX:-}" ]; then
+  auto_rename=$(tmux show-options -g automatic-rename 2>/dev/null | awk '{print $2}')
+  if [ "$auto_rename" = "on" ]; then
+    pass "automatic-rename on"
+  else
+    fail "automatic-rename is '$auto_rename' (must be 'on')"
+  fi
+  bell=$(tmux show-options -g bell-action 2>/dev/null | awk '{print $2}')
+  if [ "$bell" = "any" ]; then
+    pass "bell-action any"
+  else
+    warn "bell-action is '$bell' (recommended: 'any' so permission alerts ring in the focused pane too)"
+  fi
+else
+  warn "not running inside tmux — skipping runtime option checks"
+fi
+
+printf '\n== summary ==\n'
+printf '  %d passed, %d warnings, %d failures\n\n' "$PASS" "$WARN" "$FAIL"
+[ "$FAIL" -eq 0 ]

@@ -41,6 +41,17 @@ if command -v tmux >/dev/null 2>&1; then
   fi
 fi
 
+# Detect a conflicting user bell-action setting (claude-tmux needs `any`).
+for _conf in "${HOME}/.tmux.conf" "${HOME}/.tmux.conf.local"; do
+  [ -f "$_conf" ] || continue
+  # shellcheck disable=SC2016
+  if grep -Eq '^[[:space:]]*set(-option|w|-window-option)?[[:space:]]+(-[a-zA-Z]+[[:space:]]+)*bell-action[[:space:]]+(none|other)' "$_conf"; then
+    printf 'Warning: %s sets bell-action to a value other than `any`.\n' "$_conf" >&2
+    printf '         Permission-prompt bells may not ring. Override or remove that line;\n' >&2
+    printf '         our tmux/settings.conf expects `set -g bell-action any`.\n' >&2
+  fi
+done
+
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN_DIR="${HOME}/.local/bin"
 STATE_DIR="${CLAUDE_TMUX_STATE_DIR:-${HOME}/.local/state/claude-tmux}"
@@ -59,6 +70,7 @@ EXECUTABLES=(
   "$REPO_DIR"/bin/claude-window-aggregate
   "$REPO_DIR"/bin/claude-window-pane
   "$REPO_DIR"/bin/claude-tmux-log
+  "$REPO_DIR"/bin/claude-tmux-doctor
 )
 
 # --- 1. Symlink bin/ scripts ---

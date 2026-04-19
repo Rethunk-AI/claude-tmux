@@ -29,9 +29,12 @@ jobs:
             bin/claude-window-aggregate \
             bin/claude-window-pane \
             bin/claude-tmux-log \
+            bin/claude-tmux-doctor \
             shell/claude-label.bash \
             install.sh \
-            tests/smoke.sh
+            tests/smoke.sh \
+            tests/install-uninstall.sh \
+            uninstall.sh
 
   smoke:
     runs-on: ubuntu-latest
@@ -43,3 +46,6 @@ jobs:
 
       - name: Run hook smoke harness
         run: bash tests/smoke.sh
+
+      - name: Run install/uninstall harness
+        run: bash tests/install-uninstall.sh
