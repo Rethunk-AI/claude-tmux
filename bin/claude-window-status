@@ -34,17 +34,30 @@ case "$TOOL" in
     fi
     ;;
   TaskUpdate)
+    # Drop updates when we never saw the matching TaskCreate — otherwise the
+    # `deleted` counter can outrun `total` and push active into negative.
+    [ "$total" -eq 0 ] && exit 0
     status=$(printf '%s' "$HOOK_DATA" | jq -r '.tool_input.status // ""')
     case "$status" in
       completed)
         completed=$((completed + 1))
+        # Cap at remaining active tasks so completed/active can't exceed 1.0.
+        if [ "$completed" -gt "$active" ]; then
+          completed="$active"
+        fi
         printf '%s' "$completed" > "${BASE}.completed"
         ;;
       deleted)
         deleted=$((deleted + 1))
+        # Cap at total so active never goes negative.
+        if [ "$deleted" -gt "$total" ]; then
+          deleted="$total"
+        fi
         active=$((total - deleted))
         printf '%s' "$deleted" > "${BASE}.deleted"
-        if [ "$deleted" -eq "$total" ]; then
+        # `-ge` (not `-eq`) so self-healing still fires if stale state on disk
+        # arrived with deleted already > total (pre-clamp versions).
+        if [ "$deleted" -ge "$total" ]; then
           rm -f "${BASE}.total" "${BASE}.completed" "${BASE}.deleted" "${BASE}.label"
           tmux rename-window -t "$WINDOW_ID" "○ $(cw_workspace)" 2>/dev/null || true
           exit 0

@@ -26,12 +26,19 @@ cw_resolve_window() {
 }
 
 # Reads counter state into global vars. Requires BASE to be set.
+# `active` is clamped at 0: stale on-disk state where `deleted` exceeds `total`
+# (e.g. TaskUpdate(deleted) firing before TaskCreate at session start) would
+# otherwise produce a negative count in the window title.
 cw_read_state() {
   total=$(cat "${BASE}.total" 2>/dev/null || echo 0)
   completed=$(cat "${BASE}.completed" 2>/dev/null || echo 0)
   deleted=$(cat "${BASE}.deleted" 2>/dev/null || echo 0)
   label=$(cat "${BASE}.label" 2>/dev/null || echo "")
-  active=$((total - deleted))
+  if [ "$total" -gt "$deleted" ]; then
+    active=$((total - deleted))
+  else
+    active=0
+  fi
 }
 
 # Prints the correct progress title based on current state.
