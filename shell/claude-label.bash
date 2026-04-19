@@ -1,4 +1,7 @@
 #! bash oh-my-bash.module
+# shellcheck shell=bash disable=SC2239
+# (Above is an oh-my-bash plugin marker, not an executable shebang — this
+#  file is always sourced, never run directly. SC2239 does not apply.)
 # claude-label — sets CLAUDE_WINDOW_LABEL and renames the current tmux window
 #
 # Plain bash/zsh: source this file from ~/.bashrc or ~/.zshrc
