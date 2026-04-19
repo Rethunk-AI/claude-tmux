@@ -1,6 +1,6 @@
 # claude-tmux
 
-**Status:** `draft`
+**Status:** `implemented`
 
 **Trigger:** Claude Code's hook system exposes session lifecycle events (tool calls, task tracking, permission prompts, agent stop) but provides no built-in terminal multiplexer integration. Developers running multiple concurrent Claude Code sessions in tmux have no ambient visibility into which sessions are active, blocked, or finished without manually switching to each window. This spec defines a hook-driven tmux integration that surfaces agent state in window titles, provides audible alerting for permission prompts, enables cross-session navigation, and is installable on any machine running tmux and Claude Code.
 
@@ -233,18 +233,20 @@ claude-tmux/
     claude-window-ask          # PreToolUse: AskUserQuestion indicator
     claude-window-status       # PostToolUse: TaskCreate/TaskUpdate counters
     claude-window-restore      # PostToolUse: transient state cleanup
-    claude-window-reset        # Stop: stopped state + cleanup
+    claude-window-reset        # Stop: stopped state + cleanup + activity log
     claude-window-subagent     # SubagentStop: subagent return indicator
     claude-window-notify       # Notification: permission/idle indicators + bell
     claude-window-summary      # fzf session picker (invoked by tmux binding)
+    claude-window-aggregate    # tmux status-right: compact count of active Claude windows
+    claude-tmux-log            # activity log viewer (claude-tmux-log [-n N])
   shell/
-    claude-label.bash          # claude-label function (source in .bashrc/.zshrc)
+    claude-label.bash          # claude-label function; doubles as oh-my-bash plugin
   tmux/
     oh-my-tmux.conf            # window status color rules + separator config
     plain-tmux.conf            # equivalent rules for vanilla tmux
     bindings.conf              # prefix+f (session picker) and prefix+P (pane picker)
     settings.conf              # required tmux option overrides (bell-action, automatic-rename, etc.)
-  install.sh                   # symlinks bin/, patches settings.json, prints tmux snippet
+  install.sh                   # symlinks bin/, patches settings.json, wires oh-my-bash plugin
   spec.md                      # this file
   README.md
 ```
@@ -263,6 +265,10 @@ claude-tmux/
 | Label fixed to first TaskCreate | The session label represents the session, not individual tasks. Using the first task's subject as the label provides immediate context; overwriting on each task would cause the tab to show the most recent task name rather than the overall session context. |
 | Workspace read from `.cwd`, not `$PWD` | Hook subprocess `$PWD` is Claude's launch directory and does not update when Claude changes its working directory mid-session. `.cwd` is written by `claude-window-init` on each CWD change and is the authoritative workspace source. |
 | `prefix+f` for session picker | Overrides oh-my-tmux's default find-window on `f`. The native find-window is available as `prefix+:find-window` if needed. |
+| State files in `~/.local/state/claude-tmux/` | `$TMPDIR` is cleared on reboot, losing session picker history and activity log (OQ1). `~/.local/state/` follows the XDG state home convention and survives reboots. The picker's orphan-cleanup pass handles stale entries when windows are closed. Overridable via `CLAUDE_TMUX_STATE_DIR`. |
+| Session-qualified BASE key (`s${session_id}_w${window_id}`) | Window IDs in tmux are scoped to a server lifetime; after a server restart, `@0` is reused. Without session qualification, the new `@0` would inherit state files from the previous session's `@0`. The session_id monotonically increases within a server (`$0`, `$1`, …), making `s0_w3` stable for the life of a session. Both `cw_resolve_window` (lib) and the session picker (`claude-window-summary`) compute the key identically so file-to-window matching is guaranteed. |
+| `claude-label.bash` doubles as oh-my-bash plugin | oh-my-bash plugins are sourced files with a `#! bash oh-my-bash.module` marker. Adding the marker to `claude-label.bash` means one file serves both `source /path/to/claude-label.bash` (plain shells) and the oh-my-bash plugin slot (via symlink), eliminating a wrapper file. The marker is a comment and does not affect non-oh-my-bash sourcing. |
+| Desktop notification silent-fail on unsupported D-Bus | `notify-send` is invoked with `2>/dev/null \|\| true`. If `DBUS_SESSION_BUS_ADDRESS` does not point to a live bus, the call fails silently. The Stop indicator in the tab bar (`■`) is the primary signal; the desktop notification is supplementary. Requiring a valid D-Bus path is the user's responsibility on non-systemd systems (OQ4). |
 
 ---
 
@@ -273,4 +279,4 @@ claude-tmux/
 | OQ1 | Should `.cwd` files be kept in `$TMPDIR` (fast, non-persistent) or `~/.local/state/claude-tmux/` (persistent across reboots, enables CT28)? | Resolved: `~/.local/state/claude-tmux/` chosen. All state files live there; orphan cleanup in picker handles stale entries. Override via `CLAUDE_TMUX_STATE_DIR`. |
 | OQ2 | `prefix+f` conflicts with oh-my-tmux's default find-window binding. Should the default shipped binding be different, with documentation on how to use `f`? | Resolved: `prefix+f` chosen as the default; documented in Design decisions. |
 | OQ3 | The install script must patch `~/.claude/settings.json`. If the user already has a `hooks` block, `jq` merge may drop existing entries or conflict. | Resolved: install.sh detects existing claude-window hooks (skips if already installed), merges per-event if a foreign hooks block exists, otherwise writes fresh. |
-| OQ4 | The `notify-send` call requires `DBUS_SESSION_BUS_ADDRESS` to be explicitly set in the hook subprocess environment on Linux (`unix:path=/run/user/$(id -u)/bus`). On non-systemd Linux distributions this path may not exist. Should the stop notification be skipped silently when D-Bus is unavailable, or should there be a fallback? | Open: `notify-send ... 2>/dev/null \|\| true` silently swallows failures. macOS fallback via `osascript` is implemented. Non-systemd Linux with a working D-Bus but different socket path must set `DBUS_SESSION_BUS_ADDRESS` manually. |
+| OQ4 | The `notify-send` call requires `DBUS_SESSION_BUS_ADDRESS` to be explicitly set in the hook subprocess environment on Linux (`unix:path=/run/user/$(id -u)/bus`). On non-systemd Linux distributions this path may not exist. Should the stop notification be skipped silently when D-Bus is unavailable, or should there be a fallback? | Resolved: silent failure is the correct behavior. `notify-send 2>/dev/null \|\| true` swallows the error. macOS fallback via `osascript` is implemented. Non-systemd users who want notifications must export `DBUS_SESSION_BUS_ADDRESS` in their environment. Documented in Design decisions. |
