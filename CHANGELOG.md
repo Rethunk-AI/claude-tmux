@@ -5,6 +5,22 @@ All notable changes to claude-tmux follow this file. Format loosely based on
 
 ## [Unreleased]
 
+### Added
+- `bin/claude-tmux-doctor` — health check over deps, symlinks, state dir, hooks, and tmux runtime options.
+- Concurrent-write safety: `cw_lock` / `cw_unlock` in the shared lib, wired into `claude-window-status` and `claude-window-reset`. Uses `flock` when present, `mkdir`-based fallback otherwise (stock macOS lacks `flock`).
+- Activity log rotation on Stop: rolled to `activity.log.1` when over `CLAUDE_TMUX_LOG_MAX_BYTES` (default 1 MiB).
+- Stopped-session GC in the picker: state files whose `.stopped` sentinel is older than `CLAUDE_TMUX_STOPPED_MAX_DAYS` (default 30) are swept.
+- Installer: warns when `~/.tmux.conf` or `~/.tmux.conf.local` sets `bell-action` to a value other than `any`.
+- Smoke coverage for the session picker, pane picker, aggregate, orphan cleanup, session-qualified key isolation, stale-sentinel GC, the macOS `osascript` path, and log rotation.
+- `tests/install-uninstall.sh` harness, wired into CI.
+- Requirement traceability matrix (CT1–CT29) in the spec.
+
+### Changed
+- `claude-window-aggregate` output now separates tokens with a space (`1▶ 1✓ 1■ `), matching the documented example in README/HUMANS.
+
+### Removed
+- Linux `notify-send` desktop-notification path on Stop. D-Bus discovery was fragile across Wayland, non-systemd distros, and SSH-remote tmux. The `■` tab symbol and activity-log entry remain the primary Stop signal; macOS `osascript` is retained.
+
 ## [0.1.0] — 2026-04-19
 
 Initial implementation.
