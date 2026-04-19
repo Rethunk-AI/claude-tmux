@@ -23,7 +23,7 @@ bin/
 shell/
   claude-label.bash       claude-label() function; also an oh-my-bash plugin
 tmux/
-  settings.conf           tmux options (automatic-rename off, etc.)
+  settings.conf           tmux options (automatic-rename on, bell-action any, etc.)
   bindings.conf           key bindings (prefix+f, prefix+P)
   plain-tmux.conf         status-right config for plain tmux
   oh-my-tmux.conf         equivalent for oh-my-tmux users
