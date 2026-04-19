@@ -2,6 +2,8 @@
 # claude-tmux-log — view the claude-tmux session activity log
 # Usage: claude-tmux-log [-n N]   (default: last 25 entries)
 
+set -euo pipefail
+
 source "${BASH_SOURCE[0]%/*}/claude-window-lib"
 log="$(cw_state_dir)/activity.log"
 

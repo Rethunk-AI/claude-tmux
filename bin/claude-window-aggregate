@@ -3,6 +3,9 @@
 # Usage in tmux: set -g status-right '#(~/.local/bin/claude-window-aggregate) ...'
 # Output example: "2▶ 1✓ 1■ "
 
+set -euo pipefail
+trap 'exit 0' ERR
+
 source "${BASH_SOURCE[0]%/*}/claude-window-lib"
 state_dir="$(cw_state_dir)"
 

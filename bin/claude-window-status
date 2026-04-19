@@ -2,6 +2,9 @@
 # Claude Code PostToolUse hook — updates tmux window title
 # Triggered on TaskCreate / TaskUpdate
 
+set -euo pipefail
+trap 'exit 0' ERR
+
 source "${BASH_SOURCE[0]%/*}/claude-window-lib"
 
 HOOK_DATA=$(cat)

@@ -1,6 +1,9 @@
 #!/bin/bash
 # Claude Code Stop hook — marks window stopped, clears state for next session
 
+set -euo pipefail
+trap 'exit 0' ERR
+
 source "${BASH_SOURCE[0]%/*}/claude-window-lib"
 cw_resolve_window || exit 0
 cw_read_state

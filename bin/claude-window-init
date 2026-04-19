@@ -2,6 +2,9 @@
 # Claude Code PreToolUse hook — session bootup indicator + CWD tracking
 # Fires on every tool call; exits early if tasks are active
 
+set -euo pipefail
+trap 'exit 0' ERR
+
 source "${BASH_SOURCE[0]%/*}/claude-window-lib"
 cw_resolve_window || exit 0
 cw_read_state

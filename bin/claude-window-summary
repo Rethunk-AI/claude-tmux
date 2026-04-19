@@ -1,6 +1,8 @@
 #!/bin/bash
 # claude-window-summary — fzf picker for all active and recently stopped Claude sessions
 
+set -euo pipefail
+
 source "${BASH_SOURCE[0]%/*}/claude-window-lib"
 BASE_DIR="$(cw_state_dir)"
 
