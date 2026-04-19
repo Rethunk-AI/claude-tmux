@@ -16,6 +16,18 @@ if [ "$total" -gt 0 ]; then
 fi
 # No tasks: leave current title as-is
 
+# Append to activity log when tasks ran
+if [ "$total" -gt 0 ]; then
+  _log="$(cw_state_dir)/activity.log"
+  mkdir -p "$(dirname "$_log")"
+  printf '%s\t%s\t%s\t%s/%s\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    "${label:-(unlabeled)}" \
+    "$(cw_workspace)" \
+    "$completed" \
+    "$active" >> "$_log" 2>/dev/null || true
+fi
+
 # Clear task state; keep .cwd for the session picker; write .stopped for next boot
 rm -f "${BASE}.total" "${BASE}.started" "${BASE}.completed" "${BASE}.deleted" "${BASE}.label"
 printf '1' > "${BASE}.stopped"

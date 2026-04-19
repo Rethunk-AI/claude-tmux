@@ -1,0 +1,31 @@
+#!/bin/bash
+# claude-window-aggregate — compact active Claude window count for tmux status-right
+# Usage in tmux: set -g status-right '#(~/.local/bin/claude-window-aggregate) ...'
+# Output example: "2▶ 1✓ "  (trailing space for status-right padding)
+
+source "${BASH_SOURCE[0]%/*}/claude-window-lib"
+state_dir="$(cw_state_dir)"
+
+in_progress=0
+complete=0
+
+for f in "${state_dir}"/claude-window-*.total; do
+  [ -f "$f" ] || continue
+  base="${f%.total}"
+  total=$(cat "$f" 2>/dev/null || echo 0)
+  [ "$total" -eq 0 ] && continue
+  completed=$(cat "${base}.completed" 2>/dev/null || echo 0)
+  deleted=$(cat "${base}.deleted" 2>/dev/null || echo 0)
+  active=$((total - deleted))
+  [ "$active" -eq 0 ] && continue
+  if [ "$completed" -ge "$active" ]; then
+    complete=$((complete + 1))
+  else
+    in_progress=$((in_progress + 1))
+  fi
+done
+
+result=""
+[ "$in_progress" -gt 0 ] && result="${result}${in_progress}▶"
+[ "$complete" -gt 0 ] && result="${result}${complete}✓"
+[ -n "$result" ] && printf '%s ' "$result"

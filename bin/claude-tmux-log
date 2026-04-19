@@ -1,0 +1,18 @@
+#!/bin/bash
+# claude-tmux-log — view the claude-tmux session activity log
+# Usage: claude-tmux-log [-n N]   (default: last 25 entries)
+
+source "${BASH_SOURCE[0]%/*}/claude-window-lib"
+log="$(cw_state_dir)/activity.log"
+
+n=25
+[ "$1" = "-n" ] && n="${2:-25}"
+
+if [ ! -f "$log" ]; then
+  printf 'No activity log found at %s\n' "$log" >&2
+  exit 0
+fi
+
+printf '%-25s  %-24s  %-20s  %s\n' TIMESTAMP LABEL WORKSPACE TASKS
+printf '%-25s  %-24s  %-20s  %s\n' '-------------------------' '------------------------' '--------------------' '-----'
+tail -n "$n" "$log" | awk -F'\t' '{printf "%-25s  %-24s  %-20s  %s\n", $1, $2, $3, $4}'
