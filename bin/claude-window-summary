@@ -25,8 +25,22 @@ for f in "$BASE_DIR"/claude-window-*.cwd; do
 
   # Window no longer exists — clean up orphaned state files and skip
   if [ -z "$target" ]; then
-    rm -f "$BASE_DIR/claude-window-${key}".{cwd,stopped,total,started,completed,deleted,label}
+    rm -f "$BASE_DIR/claude-window-${key}".{cwd,stopped,total,started,completed,deleted,label,lock}
+    rmdir "$BASE_DIR/claude-window-${key}.lockd" 2>/dev/null || true
     continue
+  fi
+
+  # GC stopped sentinels older than CLAUDE_TMUX_STOPPED_MAX_DAYS (default 30).
+  # A window can stay open long after Claude stops; without this sweep the
+  # picker would keep surfacing months-old `■` entries.
+  stopfile="$BASE_DIR/claude-window-${key}.stopped"
+  if [ -f "$stopfile" ] && [ ! -f "$BASE_DIR/claude-window-${key}.total" ]; then
+    max_days="${CLAUDE_TMUX_STOPPED_MAX_DAYS:-30}"
+    if [ -n "$(find "$stopfile" -mtime +"$max_days" -print 2>/dev/null)" ]; then
+      rm -f "$BASE_DIR/claude-window-${key}".{cwd,stopped,total,started,completed,deleted,label,lock}
+      rmdir "$BASE_DIR/claude-window-${key}.lockd" 2>/dev/null || true
+      continue
+    fi
   fi
 
   wname="${WIN_NAME[$key]:-}"

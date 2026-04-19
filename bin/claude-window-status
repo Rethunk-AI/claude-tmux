@@ -11,6 +11,8 @@ HOOK_DATA=$(cat)
 TOOL=$(printf '%s' "$HOOK_DATA" | jq -r '.tool_name // ""')
 
 cw_resolve_window || exit 0
+cw_lock
+trap 'cw_unlock' EXIT
 cw_read_state
 
 case "$TOOL" in

@@ -48,3 +48,36 @@ cw_title() {
 cw_workspace() {
   basename "$(cat "${BASE}.cwd" 2>/dev/null || echo "$PWD")"
 }
+
+# Opens fd 9 on a per-BASE lockfile and (if `flock` is present) acquires an
+# exclusive advisory lock. Call `cw_unlock` to release.
+#
+# Hook scripts fire in parallel when Claude invokes tools concurrently
+# (e.g. two subagents emitting TaskUpdate at the same time). Without a lock,
+# the read-modify-write on `.total` / `.completed` / `.deleted` can lose
+# increments. `flock` is absent on stock macOS; there we fall back to a
+# `mkdir`-based advisory lock with a 5-second bound.
+cw_lock() {
+  local lockfile="${BASE}.lock"
+  : > "$lockfile" 2>/dev/null || return 0
+  # shellcheck disable=SC1083
+  if command -v flock >/dev/null 2>&1; then
+    exec 9>"$lockfile"
+    flock -x -w 5 9 2>/dev/null || true
+  else
+    local d="${BASE}.lockd" i=0
+    while ! mkdir "$d" 2>/dev/null; do
+      i=$((i + 1)); [ "$i" -ge 50 ] && { rmdir "$d" 2>/dev/null || true; break; }
+      sleep 0.1
+    done
+    CW_LOCK_DIR="$d"
+  fi
+}
+cw_unlock() {
+  if [ -n "${CW_LOCK_DIR:-}" ]; then
+    rmdir "$CW_LOCK_DIR" 2>/dev/null || true
+    unset CW_LOCK_DIR
+  else
+    exec 9>&- 2>/dev/null || true
+  fi
+}
