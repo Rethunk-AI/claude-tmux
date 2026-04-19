@@ -19,6 +19,9 @@ All notable changes to claude-tmux follow this file. Format loosely based on
 ### Changed
 - `claude-window-aggregate` output now separates tokens with a space (`1▶ 1✓ 1■ `), matching the documented example in README/HUMANS.
 
+### Fixed
+- Counter never goes negative in the tab title. `TaskUpdate(deleted)` with no prior `TaskCreate` is now a no-op; `deleted` and `completed` are clamped at their caps; the all-deleted cleanup uses `-ge` instead of `-eq` so stale `deleted > total` state self-heals on the next event. `cw_read_state` clamps `active` at 0 as a last-resort guard.
+
 ### Removed
 - `install.sh` and `uninstall.sh` — consolidated into `setup.sh {install|uninstall}`. No shims are shipped; invocations in existing scripts or muscle memory must switch to the new command.
 - Linux `notify-send` desktop-notification path on Stop. D-Bus discovery was fragile across Wayland, non-systemd distros, and SSH-remote tmux. The `■` tab symbol and activity-log entry remain the primary Stop signal; macOS `osascript` is retained.
