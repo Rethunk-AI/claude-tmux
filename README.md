@@ -125,4 +125,4 @@ Session state is stored in `~/.local/state/claude-tmux/` (or `$CLAUDE_TMUX_STATE
 
 ## Spec
 
-Full use case / requirements / design decisions: [`spec.md`](spec.md)
+Full use case / requirements / design decisions: [`specs/done/claude-tmux/spec.md`](specs/done/claude-tmux/spec.md)
