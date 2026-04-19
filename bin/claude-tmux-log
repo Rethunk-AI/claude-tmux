@@ -6,7 +6,14 @@ source "${BASH_SOURCE[0]%/*}/claude-window-lib"
 log="$(cw_state_dir)/activity.log"
 
 n=25
-[ "$1" = "-n" ] && n="${2:-25}"
+follow=0
+while [ $# -gt 0 ]; do
+  case "${1:-}" in
+    -n) n="${2:-25}"; shift 2 ;;
+    -f) follow=1; shift ;;
+    *)  break ;;
+  esac
+done
 
 if [ ! -f "$log" ]; then
   printf 'No activity log found at %s\n' "$log" >&2
@@ -15,4 +22,8 @@ fi
 
 printf '%-25s  %-24s  %-20s  %s\n' TIMESTAMP LABEL WORKSPACE TASKS
 printf '%-25s  %-24s  %-20s  %s\n' '-------------------------' '------------------------' '--------------------' '-----'
-tail -n "$n" "$log" | awk -F'\t' '{printf "%-25s  %-24s  %-20s  %s\n", $1, $2, $3, $4}'
+if [ "$follow" -eq 1 ]; then
+  tail -f "$log" | awk -F'\t' '{printf "%-25s  %-24s  %-20s  %s\n", $1, $2, $3, $4; fflush()}'
+else
+  tail -n "$n" "$log" | awk -F'\t' '{printf "%-25s  %-24s  %-20s  %s\n", $1, $2, $3, $4}'
+fi
