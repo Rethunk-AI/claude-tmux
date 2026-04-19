@@ -17,13 +17,28 @@ BIN_DIR="${HOME}/.local/bin"
 STATE_DIR="${CLAUDE_TMUX_STATE_DIR:-${HOME}/.local/state/claude-tmux}"
 SETTINGS="${HOME}/.claude/settings.json"
 
+# Executables only — claude-window-lib is a sourced library, not a script
+EXECUTABLES=(
+  "$REPO_DIR"/bin/claude-window-init
+  "$REPO_DIR"/bin/claude-window-ask
+  "$REPO_DIR"/bin/claude-window-status
+  "$REPO_DIR"/bin/claude-window-restore
+  "$REPO_DIR"/bin/claude-window-reset
+  "$REPO_DIR"/bin/claude-window-subagent
+  "$REPO_DIR"/bin/claude-window-notify
+  "$REPO_DIR"/bin/claude-window-summary
+  "$REPO_DIR"/bin/claude-window-aggregate
+  "$REPO_DIR"/bin/claude-window-pane
+  "$REPO_DIR"/bin/claude-tmux-log
+)
+
 # --- 1. Symlink bin/ scripts ---
 
 echo "Linking scripts..."
 mkdir -p "$BIN_DIR"
-chmod +x "$REPO_DIR"/bin/claude-window-* "$REPO_DIR"/bin/claude-tmux-log
+chmod +x "${EXECUTABLES[@]}"
 
-for script in "$REPO_DIR"/bin/claude-window-* "$REPO_DIR"/bin/claude-tmux-log; do
+for script in "${EXECUTABLES[@]}"; do
   name="$(basename "$script")"
   target="$BIN_DIR/$name"
   if [ -L "$target" ]; then
