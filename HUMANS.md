@@ -61,6 +61,12 @@ claude
 
 The label appears in the tab immediately (`○ ironlaw-network`) and carries through all state transitions.
 
+To clear the label and revert to auto-derive behavior, call `claude-label` with no argument:
+```bash
+claude-label
+```
+This unsets `CLAUDE_WINDOW_LABEL` and renames the window to `○ <cwd-basename>`.
+
 ### Session picker
 
 `prefix+f` — fuzzy picker over all Claude windows (active + recently stopped). Shows window title and working directory. Enter to switch.
@@ -76,13 +82,14 @@ Add to your tmux `status-right` to show a compact count of active Claude windows
 #(~/.local/bin/claude-window-aggregate)
 ```
 
-Example output: `2▶ 1✓ ` (2 sessions in progress, 1 complete)
+Example output: `2▶ 1✓ 1■ ` (2 in progress, 1 complete, 1 stopped)
 
 ### Activity log
 
 ```bash
 claude-tmux-log          # recent 25 sessions
 claude-tmux-log -n 50   # last 50 entries
+claude-tmux-log -f       # follow mode — stream new entries as sessions stop
 ```
 
 Log is written to `~/.local/state/claude-tmux/activity.log` on each session stop.

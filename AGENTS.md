@@ -16,7 +16,8 @@ bin/
   claude-window-subagent  SubagentStop: set ↩ title
   claude-window-ask       PreToolUse(AskUserQuestion): set ? title
   claude-window-reset     Stop: write activity log, reset title, send stop notification
-  claude-window-aggregate reads state dir, emits compact active/complete counts for status-right
+  claude-window-aggregate reads state dir, emits compact in-progress/complete/stopped counts for status-right
+  claude-window-pane      fzf pane picker across all sessions (launched by tmux binding)
   claude-window-summary   fzf session picker (launched by tmux binding)
   claude-tmux-log         tail/format ~/.local/state/claude-tmux/activity.log
 shell/
