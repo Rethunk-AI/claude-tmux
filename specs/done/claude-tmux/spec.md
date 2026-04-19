@@ -246,8 +246,12 @@ claude-tmux/
     plain-tmux.conf            # equivalent rules for vanilla tmux
     bindings.conf              # prefix+f (session picker) and prefix+P (pane picker)
     settings.conf              # required tmux option overrides (bell-action, automatic-rename, etc.)
+  specs/
+    index.md                   # table of record
+    done/
+      claude-tmux/
+        spec.md                # this file
   install.sh                   # symlinks bin/, patches settings.json, wires oh-my-bash plugin
-  spec.md                      # this file
   README.md
 ```
 
