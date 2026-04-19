@@ -10,7 +10,6 @@ cw_resolve_window || exit 0
 cw_read_state
 
 if [ "$total" -eq 0 ]; then
-  [ -f "${BASE}.stopped" ] && exit 0  # stopped — leave ■ as-is
   tmux rename-window -t "$WINDOW_ID" "○ $(cw_workspace)" 2>/dev/null || true
   exit 0
 fi
