@@ -10,11 +10,23 @@ cw_read_state
 
 if [ "$total" -gt 0 ]; then
   tmux rename-window -t "$WINDOW_ID" "■ ${completed}/${active}${label:+ $label}" 2>/dev/null || true
-  export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u)/bus"
+  _body="${label:-$(cw_workspace)} — ${completed}/${active} tasks"
   if command -v notify-send >/dev/null 2>&1; then
-    notify-send -u normal "Claude finished" "${label:-$(cw_workspace)} — ${completed}/${active} tasks" 2>/dev/null || true
+    # Respect a preset DBUS_SESSION_BUS_ADDRESS (user-mode systemd, custom bus);
+    # only fall back to the standard per-uid socket path.
+    export DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-unix:path=/run/user/$(id -u)/bus}"
+    notify-send -u normal "Claude finished" "$_body" 2>/dev/null || true
   elif command -v osascript >/dev/null 2>&1; then
-    osascript -e "display notification \"${label:-$(cw_workspace)} — ${completed}/${active} tasks\" with title \"Claude finished\"" 2>/dev/null || true
+    # Pipe the AppleScript on stdin with "$_body" / "$_title" as env vars so
+    # user-controlled text can't inject string literals or backslashes.
+    CLAUDE_TMUX_BODY="$_body" CLAUDE_TMUX_TITLE="Claude finished" \
+      osascript <<'APPLESCRIPT' 2>/dev/null || true
+on run
+  set theBody to system attribute "CLAUDE_TMUX_BODY"
+  set theTitle to system attribute "CLAUDE_TMUX_TITLE"
+  display notification theBody with title theTitle
+end run
+APPLESCRIPT
   fi
 fi
 # No tasks: leave current title as-is
