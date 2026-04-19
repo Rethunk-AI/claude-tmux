@@ -3,7 +3,7 @@
 
 # Returns the state directory (persistent storage for all session state + logs).
 cw_state_dir() {
-  echo "${CLAUDE_TMUX_STATE_DIR:-${HOME}/.local/state/claude-tmux}"
+  printf '%s' "${CLAUDE_TMUX_STATE_DIR:-${HOME}/.local/state/claude-tmux}"
 }
 
 # Sets WINDOW_ID and BASE. Returns 1 on failure (caller should exit).
