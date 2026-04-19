@@ -49,8 +49,8 @@ for f in "${state_dir}"/claude-window-*.cwd; do
   [ -f "${state_dir}/claude-window-${key}.stopped" ] && stopped=$((stopped + 1))
 done
 
-result=""
-[ "$in_progress" -gt 0 ] && result="${result}${in_progress}▶"
-[ "$complete" -gt 0 ]    && result="${result}${complete}✓"
-[ "$stopped" -gt 0 ]     && result="${result}${stopped}■"
-[ -n "$result" ] && printf '%s ' "$result"
+parts=()
+[ "$in_progress" -gt 0 ] && parts+=("${in_progress}▶")
+[ "$complete"    -gt 0 ] && parts+=("${complete}✓")
+[ "$stopped"     -gt 0 ] && parts+=("${stopped}■")
+[ "${#parts[@]}" -gt 0 ] && printf '%s ' "${parts[*]}"
