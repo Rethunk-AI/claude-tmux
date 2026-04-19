@@ -40,6 +40,8 @@ Per-window state is stored as flat files in `$TMPDIR`, keyed by sanitized tmux w
 | `.label` | Session label (from env var or first task subject) | Cleared on stop |
 | `.stopped` | Sentinel (value `1`) written on stop | Consumed (deleted) on next bootup |
 
+> Historical note: `.started` was once documented as a first-tool-use timestamp but was never written by any hook — the activity log already carries the stop timestamp, so `.started` was dropped from the state model. Reset / status cleanup still `rm -f`'s it defensively in case a stale file survives a downgrade.
+
 **Design decision:** `.cwd` is intentionally kept after stop so that stopped sessions (`■`) remain visible in the session picker. The `.stopped` sentinel ensures the next Claude boot still triggers the `○` bootup indicator even when the CWD has not changed.
 
 ### Title format
@@ -237,8 +239,11 @@ claude-tmux/
     claude-window-subagent     # SubagentStop: subagent return indicator
     claude-window-notify       # Notification: permission/idle indicators + bell
     claude-window-summary      # fzf session picker (invoked by tmux binding)
+    claude-window-pane         # fzf pane picker across all sessions (CT21)
     claude-window-aggregate    # tmux status-right: compact count of active Claude windows
     claude-tmux-log            # activity log viewer (claude-tmux-log [-n N])
+  tests/
+    smoke.sh                   # stub-tmux harness asserting each hook's rename-window call
   shell/
     claude-label.bash          # claude-label function; doubles as oh-my-bash plugin
   tmux/

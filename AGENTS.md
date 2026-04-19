@@ -39,7 +39,7 @@ README.md
 - Every script in `bin/` sources the shared lib via **`source "${BASH_SOURCE[0]%/*}/claude-window-lib"`** — never hardcode a path.
 - State is stored under **`~/.local/state/claude-tmux/`** (or `$CLAUDE_TMUX_STATE_DIR`). `cw_state_dir()` in the lib is the single source of truth.
 - BASE key formula: **`claude-window-s${session_id_digits}_w${window_id_digits}`** (e.g. `claude-window-s0_w3`). The session_id prefix prevents stale state bleed when tmux recycles window IDs after a server restart. `cw_resolve_window()` in the lib sets both `WINDOW_ID` and `BASE`.
-- `claude-window-summary` must use the identical key formula when scanning state files and mapping them to live windows via `tmux list-windows -a -F '#{window_id} #{session_id} #{session_name} #{window_name}'`.
+- `claude-window-summary` must use the identical key formula when scanning state files and mapping them to live windows via `tmux list-windows -a -F $'#{window_id}\t#{session_id}\t#{session_name}\t#{window_name}'` (tab-delimited so session / window names containing spaces parse cleanly).
 
 ## Hook events → scripts
 
@@ -64,7 +64,7 @@ Each active window's state lives in `$(cw_state_dir)/claude-window-<key>.*`:
 | `.total` | total task count |
 | `.completed` | completed task count |
 | `.deleted` | deleted/N/A task count |
-| `.started` | timestamp of first tool use |
+| `.stopped` | sentinel written on Stop; consumed by the next bootup to re-show `○` |
 
 Activity log: `$(cw_state_dir)/activity.log` — TSV written on each `Stop`.
 
