@@ -1,9 +1,9 @@
+#! bash oh-my-bash.module
 # claude-label — sets CLAUDE_WINDOW_LABEL and renames the current tmux window
-# Source this file from ~/.bashrc or ~/.zshrc:
-#   source /path/to/claude-tmux/shell/claude-label.bash
 #
-# oh-my-bash users can symlink into custom plugins:
-#   ~/.oh-my-bash/custom/plugins/claude-label/claude-label.plugin.bash
+# Plain bash/zsh: source this file from ~/.bashrc or ~/.zshrc
+# oh-my-bash: install.sh symlinks this file as claude-label.plugin.bash;
+#             add 'claude-label' to the plugins array in ~/.bashrc
 
 claude-label() {
   local name="$1"

@@ -74,12 +74,35 @@ fi
 
 echo ""
 
-# --- 3. Instructions ---
+# --- 3. Shell integration (claude-label) ---
+
+OMB_PLUGIN_DIR="${HOME}/.oh-my-bash/custom/plugins/claude-label"
+if [ -d "${HOME}/.oh-my-bash" ]; then
+  mkdir -p "$OMB_PLUGIN_DIR"
+  target="$OMB_PLUGIN_DIR/claude-label.plugin.bash"
+  if [ -L "$target" ]; then
+    rm "$target"
+  elif [ -f "$target" ]; then
+    echo "  [warn] Replacing existing oh-my-bash plugin with symlink: $target"
+    rm "$target"
+  fi
+  ln -s "$REPO_DIR/shell/claude-label.bash" "$target"
+  echo "oh-my-bash plugin linked: $target"
+  if grep -q "claude-label" "${HOME}/.bashrc" 2>/dev/null; then
+    echo "  'claude-label' already in plugins array — nothing to do."
+  else
+    echo "  Add 'claude-label' to the plugins array in ~/.bashrc."
+  fi
+else
+  echo "Shell integration — add to ~/.bashrc or ~/.zshrc:"
+  echo "  source ${REPO_DIR}/shell/claude-label.bash"
+fi
+
+echo ""
+
+# --- 4. Instructions ---
 
 cat <<INSTRUCTIONS
-Shell integration — add to ~/.bashrc or ~/.zshrc:
-  source ${REPO_DIR}/shell/claude-label.bash
-
 Tmux config — choose one:
 
   Plain tmux (~/.tmux.conf):
