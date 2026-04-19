@@ -6,6 +6,7 @@ All notable changes to claude-tmux follow this file. Format loosely based on
 ## [Unreleased]
 
 ### Added
+- `setup.sh` — single entrypoint replacing `install.sh` and `uninstall.sh`. Subcommands: `install`, `uninstall`, `doctor`, `selftest`, `help`.
 - `bin/claude-tmux-doctor` — health check over deps, symlinks, state dir, hooks, and tmux runtime options.
 - Concurrent-write safety: `cw_lock` / `cw_unlock` in the shared lib, wired into `claude-window-status` and `claude-window-reset`. Uses `flock` when present, `mkdir`-based fallback otherwise (stock macOS lacks `flock`).
 - Activity log rotation on Stop: rolled to `activity.log.1` when over `CLAUDE_TMUX_LOG_MAX_BYTES` (default 1 MiB).
@@ -19,6 +20,7 @@ All notable changes to claude-tmux follow this file. Format loosely based on
 - `claude-window-aggregate` output now separates tokens with a space (`1▶ 1✓ 1■ `), matching the documented example in README/HUMANS.
 
 ### Removed
+- `install.sh` and `uninstall.sh` — consolidated into `setup.sh {install|uninstall}`. No shims are shipped; invocations in existing scripts or muscle memory must switch to the new command.
 - Linux `notify-send` desktop-notification path on Stop. D-Bus discovery was fragile across Wayland, non-systemd distros, and SSH-remote tmux. The `■` tab symbol and activity-log entry remain the primary Stop signal; macOS `osascript` is retained.
 
 ## [0.1.0] — 2026-04-19
