@@ -1,7 +1,7 @@
 #!/bin/bash
-# tests/install-uninstall.sh — run install.sh + uninstall.sh against a throw-away
-# $HOME and assert that uninstall reverses install for symlinks and the
-# settings.json hooks block.
+# tests/install-uninstall.sh — run `setup.sh install` + `setup.sh uninstall`
+# against a throw-away $HOME and assert that uninstall reverses install for
+# symlinks and the settings.json hooks block.
 #
 # Requires: jq, bash >= 4.
 
@@ -21,8 +21,8 @@ bad()  { printf '  FAIL  %s\n' "$*" >&2; fail=1; }
 
 printf '\n== install ==\n'
 # install.sh echoes output; silence stdout but keep stderr for real errors.
-if ! bash "$REPO/install.sh" >/dev/null; then
-  bad "install.sh exited non-zero"
+if ! bash "$REPO/setup.sh" install >/dev/null; then
+  bad "setup.sh install exited non-zero"
   exit 1
 fi
 
@@ -48,8 +48,8 @@ else
 fi
 
 printf '\n== uninstall ==\n'
-if ! bash "$REPO/uninstall.sh" >/dev/null; then
-  bad "uninstall.sh exited non-zero"
+if ! bash "$REPO/setup.sh" uninstall >/dev/null; then
+  bad "setup.sh uninstall exited non-zero"
 fi
 
 still=0

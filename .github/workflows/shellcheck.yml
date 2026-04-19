@@ -31,10 +31,9 @@ jobs:
             bin/claude-tmux-log \
             bin/claude-tmux-doctor \
             shell/claude-label.bash \
-            install.sh \
+            setup.sh \
             tests/smoke.sh \
-            tests/install-uninstall.sh \
-            uninstall.sh
+            tests/install-uninstall.sh
 
   smoke:
     runs-on: ubuntu-latest
