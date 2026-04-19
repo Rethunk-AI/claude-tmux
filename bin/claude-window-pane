@@ -1,0 +1,13 @@
+#!/bin/bash
+# claude-window-pane — fzf picker for all tmux panes across all sessions
+
+selected=$(tmux list-panes -a \
+  -F '#{session_name}:#{window_index}.#{pane_index}	[#{window_name}] #{b:pane_current_path} (#{pane_current_command})' \
+  2>/dev/null \
+  | fzf --reverse --no-sort --delimiter=$'\t' --with-nth=2 \
+        --header='SESSION:WIN.PANE  [WINDOW] PATH (COMMAND)  — Enter to switch' \
+        --prompt='  ')
+
+[ -z "$selected" ] && exit 0
+target=$(printf '%s' "$selected" | cut -f1)
+tmux switch-client -t "$target" 2>/dev/null || true
