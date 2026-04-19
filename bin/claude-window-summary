@@ -1,18 +1,21 @@
 #!/bin/bash
 # claude-window-summary — fzf picker for all active and recently stopped Claude sessions
 
-BASE_DIR="${TMPDIR:-/tmp}"
+source "${BASH_SOURCE[0]%/*}/claude-window-lib"
+BASE_DIR="$(cw_state_dir)"
 
-# Build maps: sanitized_window_id → target and window name
+# Build maps: session+window key → tmux target and window name
+# Key formula must match cw_resolve_window: s${session_id_digits}_w${window_id_digits}
 declare -A WIN_TARGET WIN_NAME
 while IFS= read -r line; do
   wid=$(printf '%s' "$line" | awk '{print $1}')
-  sess=$(printf '%s' "$line" | awk '{print $2}')
-  wname=$(printf '%s' "$line" | cut -d' ' -f3-)
-  san="${wid//[^a-zA-Z0-9_]/}"
+  sid=$(printf '%s' "$line" | awk '{print $2}')
+  sess=$(printf '%s' "$line" | awk '{print $3}')
+  wname=$(printf '%s' "$line" | cut -d' ' -f4-)
+  san="s${sid//[^0-9]/}_w${wid//[^0-9]/}"
   WIN_TARGET["$san"]="${sess}:${wid}"
   WIN_NAME["$san"]="$wname"
-done < <(tmux list-windows -a -F '#{window_id} #{session_name} #{window_name}' 2>/dev/null)
+done < <(tmux list-windows -a -F '#{window_id} #{session_id} #{session_name} #{window_name}' 2>/dev/null)
 
 lines=()
 for f in "$BASE_DIR"/claude-window-*.cwd; do

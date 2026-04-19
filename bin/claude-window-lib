@@ -7,15 +7,22 @@ cw_state_dir() {
 }
 
 # Sets WINDOW_ID and BASE. Returns 1 on failure (caller should exit).
+# BASE is keyed by session+window ID to prevent state bleed across server restarts.
 cw_resolve_window() {
   [ -z "${TMUX:-}" ] && return 1
-  local pane="${TMUX_PANE:-}"
+  local pane="${TMUX_PANE:-}" wid sid
   if [ -n "$pane" ]; then
-    WINDOW_ID=$(tmux display-message -t "$pane" -p '#{window_id}' 2>/dev/null) || return 1
+    wid=$(tmux display-message -t "$pane" -p '#{window_id}' 2>/dev/null) || return 1
+    sid=$(tmux display-message -t "$pane" -p '#{session_id}' 2>/dev/null) || return 1
   else
-    WINDOW_ID=$(tmux display-message -p '#{window_id}' 2>/dev/null) || return 1
+    wid=$(tmux display-message -p '#{window_id}' 2>/dev/null) || return 1
+    sid=$(tmux display-message -p '#{session_id}' 2>/dev/null) || return 1
   fi
-  BASE="${TMPDIR:-/tmp}/claude-window-${WINDOW_ID//[^a-zA-Z0-9_]/}"
+  WINDOW_ID="$wid"
+  local state_dir
+  state_dir="$(cw_state_dir)"
+  mkdir -p "$state_dir"
+  BASE="${state_dir}/claude-window-s${sid//[^0-9]/}_w${wid//[^0-9]/}"
 }
 
 # Reads counter state into global vars. Requires BASE to be set.

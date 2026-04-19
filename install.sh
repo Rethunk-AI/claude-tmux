@@ -3,9 +3,10 @@
 #
 # What this does:
 #   1. Symlinks bin/* to ~/.local/bin/ (idempotent)
-#   2. Patches ~/.claude/settings.json with the hooks block (if no hooks block exists)
-#      If a hooks block already exists, prints manual merge instructions.
-#   3. Prints shell integration and tmux config instructions.
+#   2. Creates ~/.local/state/claude-tmux/ for persistent state + logs
+#   3. Patches ~/.claude/settings.json with hooks (skipped if already installed)
+#   4. Wires shell/claude-label.bash as oh-my-bash plugin or prints source line
+#   5. Prints tmux config instructions
 #
 # Requirements: bash >= 4.0, jq, fzf, tmux >= 3.2
 
@@ -13,14 +14,16 @@ set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN_DIR="${HOME}/.local/bin"
+STATE_DIR="${CLAUDE_TMUX_STATE_DIR:-${HOME}/.local/state/claude-tmux}"
 SETTINGS="${HOME}/.claude/settings.json"
 
 # --- 1. Symlink bin/ scripts ---
 
+echo "Linking scripts..."
 mkdir -p "$BIN_DIR"
-chmod +x "$REPO_DIR"/bin/claude-window-*
+chmod +x "$REPO_DIR"/bin/claude-window-* "$REPO_DIR"/bin/claude-tmux-log
 
-for script in "$REPO_DIR"/bin/claude-window-*; do
+for script in "$REPO_DIR"/bin/claude-window-* "$REPO_DIR"/bin/claude-tmux-log; do
   name="$(basename "$script")"
   target="$BIN_DIR/$name"
   if [ -L "$target" ]; then
@@ -35,7 +38,13 @@ done
 
 echo ""
 
-# --- 2. Patch ~/.claude/settings.json ---
+# --- 2. Create state directory ---
+
+mkdir -p "$STATE_DIR"
+echo "State directory: $STATE_DIR"
+echo ""
+
+# --- 3. Patch ~/.claude/settings.json ---
 
 HOOKS_JSON=$(cat <<'HOOKS'
 {
@@ -58,13 +67,30 @@ if [ ! -f "$SETTINGS" ]; then
   echo '{}' > "$SETTINGS"
 fi
 
-if jq -e '.hooks' "$SETTINGS" >/dev/null 2>&1; then
-  echo "Hooks block already present in $SETTINGS."
-  echo "Merge manually — expected hooks JSON:"
-  echo ""
-  printf '%s\n' "$HOOKS_JSON" | jq .
-  echo ""
-  echo "Or run: jq '.hooks = (.hooks + \$h)' --argjson h '$HOOKS_JSON' $SETTINGS > /tmp/settings.json && mv /tmp/settings.json $SETTINGS"
+# Check if our hooks are already installed (any command referencing claude-window-)
+already_installed=false
+if jq -e '
+  .hooks // {} |
+  [to_entries[] | .value[] | .hooks // [] | .[] | .command] |
+  any(contains("claude-window-"))
+' "$SETTINGS" >/dev/null 2>&1; then
+  already_installed=true
+fi
+
+if $already_installed; then
+  echo "Hooks already present in $SETTINGS — skipping."
+elif jq -e '.hooks' "$SETTINGS" >/dev/null 2>&1; then
+  # hooks block exists but not ours — merge per-event to avoid clobbering existing hooks
+  tmp=$(mktemp)
+  jq --argjson h "$HOOKS_JSON" '
+    .hooks as $existing |
+    reduce ($h | to_entries[]) as $entry (
+      .;
+      .hooks[$entry.key] = (($existing[$entry.key] // []) + $entry.value)
+    )
+  ' "$SETTINGS" > "$tmp"
+  mv "$tmp" "$SETTINGS"
+  echo "Hooks merged into existing hooks block in $SETTINGS"
 else
   tmp=$(mktemp)
   jq --argjson h "$HOOKS_JSON" '. + {hooks: $h}' "$SETTINGS" > "$tmp"
@@ -74,7 +100,7 @@ fi
 
 echo ""
 
-# --- 3. Shell integration (claude-label) ---
+# --- 4. Shell integration (claude-label) ---
 
 OMB_PLUGIN_DIR="${HOME}/.oh-my-bash/custom/plugins/claude-label"
 if [ -d "${HOME}/.oh-my-bash" ]; then
@@ -100,7 +126,7 @@ fi
 
 echo ""
 
-# --- 4. Instructions ---
+# --- 5. Instructions ---
 
 cat <<INSTRUCTIONS
 Tmux config — choose one:
@@ -115,6 +141,9 @@ Tmux config — choose one:
     ${REPO_DIR}/tmux/oh-my-tmux.conf
     ${REPO_DIR}/tmux/settings.conf
     ${REPO_DIR}/tmux/bindings.conf
+
+Status-right aggregate (optional) — add to tmux status-right:
+  #(${BIN_DIR}/claude-window-aggregate)
 
 Reload tmux config: prefix+r (oh-my-tmux) or: tmux source-file ~/.tmux.conf
 
