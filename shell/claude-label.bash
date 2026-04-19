@@ -6,10 +6,13 @@
 #             add 'claude-label' to the plugins array in ~/.bashrc
 
 claude-label() {
-  local name="$1"
-  if [ -z "$name" ]; then
-    echo "Usage: claude-label <name>" >&2
-    return 1
+  local name="${1:-}"
+  if [ $# -eq 0 ]; then
+    unset CLAUDE_WINDOW_LABEL
+    if [ -n "${TMUX:-}" ]; then
+      tmux rename-window "○ $(basename "$PWD")" 2>/dev/null || true
+    fi
+    return 0
   fi
   export CLAUDE_WINDOW_LABEL="$name"
   if [ -n "${TMUX:-}" ]; then
