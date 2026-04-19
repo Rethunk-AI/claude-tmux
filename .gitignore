@@ -1,0 +1,14 @@
+# Editor artifacts
+.DS_Store
+*.swp
+*~
+.idea/
+.vscode/
+*.iml
+
+# Shell history / temp
+.bash_history
+.zsh_history
+
+# Test scratch
+*.log.tmp

@@ -1,0 +1,33 @@
+name: shellcheck
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: sudo apt-get install -y shellcheck
+
+      - name: Lint bin/ scripts
+        run: |
+          shellcheck -S error \
+            bin/claude-window-lib \
+            bin/claude-window-init \
+            bin/claude-window-ask \
+            bin/claude-window-status \
+            bin/claude-window-restore \
+            bin/claude-window-reset \
+            bin/claude-window-subagent \
+            bin/claude-window-notify \
+            bin/claude-window-summary \
+            bin/claude-window-aggregate \
+            bin/claude-window-pane \
+            bin/claude-tmux-log \
+            shell/claude-label.bash \
+            install.sh
