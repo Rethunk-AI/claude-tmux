@@ -259,6 +259,47 @@ else
 fi
 unset TMUX_LIST_WINDOWS_OUT
 
+# --- counter clamps: status can't drive active negative ----------------
+printf '\n== status: never go negative ==\n'
+rm -f "$STATE"/claude-window-*
+printf '%s' "$PWD" > "$KEY_BASE.cwd"
+
+# 1. TaskUpdate(deleted) with no prior TaskCreate must be a no-op.
+run claude-window-status '{"tool_name":"TaskUpdate","tool_input":{"status":"deleted"}}'
+if [ ! -f "$KEY_BASE.deleted" ] && [ ! -f "$KEY_BASE.total" ]; then
+  printf '  PASS  TaskUpdate(deleted) with total=0 is a no-op\n'
+else
+  printf '  FAIL  TaskUpdate(deleted) wrote counters despite total=0\n' >&2
+  ls "$STATE"/claude-window-s0_w0.* 2>/dev/null | sed 's/^/        /' >&2
+  fail=1
+fi
+
+# 2. Stale state where deleted > total must self-heal on the next TaskUpdate,
+#    not accumulate a more-negative active.
+printf '3' > "$KEY_BASE.total"
+printf '7' > "$KEY_BASE.deleted"
+run claude-window-status '{"tool_name":"TaskUpdate","tool_input":{"status":"deleted"}}'
+if [ ! -f "$KEY_BASE.total" ] && [ ! -f "$KEY_BASE.deleted" ]; then
+  printf '  PASS  deleted > total self-heals to ○\n'
+  assert 'stale drift rename to ○ workspace' 'rename-window.*○ '
+else
+  printf '  FAIL  deleted > total did not trigger cleanup\n' >&2; fail=1
+fi
+
+# 3. deleted events capped at total so the rename never shows a negative /N.
+printf '2' > "$KEY_BASE.total"
+printf '0' > "$KEY_BASE.completed"
+printf '1' > "$KEY_BASE.deleted"
+run claude-window-status '{"tool_name":"TaskUpdate","tool_input":{"status":"deleted"}}'
+# Third successive deleted would overflow without the cap; check state clears.
+if [ ! -f "$KEY_BASE.deleted" ] && [ ! -f "$KEY_BASE.total" ]; then
+  printf '  PASS  second deleted on 2/2 triggers cleanup (no overflow)\n'
+else
+  printf '  FAIL  deleted overflow not clamped (total=%s deleted=%s)\n' \
+    "$(cat "$KEY_BASE.total" 2>/dev/null)" "$(cat "$KEY_BASE.deleted" 2>/dev/null)" >&2
+  fail=1
+fi
+
 printf '\n'
 if [ "$fail" -eq 0 ]; then
   printf 'smoke: all assertions passed.\n'
