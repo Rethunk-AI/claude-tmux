@@ -12,6 +12,35 @@
 
 set -euo pipefail
 
+# --- 0. Preflight ---
+
+if (( BASH_VERSINFO[0] < 4 )); then
+  printf 'Error: bash >= 4.0 required (detected %s).\n' "$BASH_VERSION" >&2
+  printf 'macOS stock bash is 3.2. Install a newer bash (e.g. `brew install bash`)\n' >&2
+  printf 'and re-run with /opt/homebrew/bin/bash install.sh or /usr/local/bin/bash install.sh.\n' >&2
+  exit 1
+fi
+
+missing=()
+for dep in jq fzf tmux; do
+  command -v "$dep" >/dev/null 2>&1 || missing+=("$dep")
+done
+if [ "${#missing[@]}" -gt 0 ]; then
+  printf 'Error: missing required dependencies: %s\n' "${missing[*]}" >&2
+  printf 'Install them via your package manager (apt, brew, dnf, …) and retry.\n' >&2
+  exit 1
+fi
+
+if command -v tmux >/dev/null 2>&1; then
+  tmux_version="$(tmux -V 2>/dev/null | awk '{print $2}')"
+  tmux_major="${tmux_version%%.*}"
+  tmux_minor="${tmux_version#*.}"; tmux_minor="${tmux_minor%%[^0-9]*}"
+  if [ "${tmux_major:-0}" -lt 3 ] || { [ "${tmux_major:-0}" -eq 3 ] && [ "${tmux_minor:-0}" -lt 2 ]; }; then
+    printf 'Warning: tmux >= 3.2 required for display-popup (detected %s).\n' "$tmux_version" >&2
+    printf 'Pickers (prefix+f, prefix+P) will not work without it.\n' >&2
+  fi
+fi
+
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN_DIR="${HOME}/.local/bin"
 STATE_DIR="${CLAUDE_TMUX_STATE_DIR:-${HOME}/.local/state/claude-tmux}"
@@ -79,6 +108,7 @@ HOOKS
 )
 
 if [ ! -f "$SETTINGS" ]; then
+  mkdir -p "$(dirname "$SETTINGS")"
   echo '{}' > "$SETTINGS"
 fi
 
