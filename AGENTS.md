@@ -12,10 +12,10 @@ bin/
   claude-window-init      PreToolUse: resolve window, write .cwd file
   claude-window-status    PostToolUse(TaskCreate|TaskUpdate): update progress title
   claude-window-restore   PostToolUse(.*): restore non-task title
-  claude-window-notify    Notification: ring bell + desktop notification
+  claude-window-notify    Notification: ring bell (macOS: also osascript)
   claude-window-subagent  SubagentStop: set ↩ title
   claude-window-ask       PreToolUse(AskUserQuestion): set ? title
-  claude-window-reset     Stop: write activity log, reset title, send stop notification
+  claude-window-reset     Stop: write activity log, reset title, macOS stop notification
   claude-window-aggregate reads state dir, emits compact in-progress/complete/stopped counts for status-right
   claude-window-pane      fzf pane picker across all sessions (launched by tmux binding)
   claude-window-summary   fzf session picker (launched by tmux binding)
@@ -30,7 +30,7 @@ tmux/
 specs/
   index.md                table of record
   done/claude-tmux/       spec.md (Status: implemented)
-install.sh                symlinks bin/* to ~/.local/bin/, patches ~/.claude/settings.json
+setup.sh                  single entrypoint: install | uninstall | doctor | selftest
 README.md
 ```
 
@@ -68,15 +68,12 @@ Each active window's state lives in `$(cw_state_dir)/claude-window-<key>.*`:
 
 Activity log: `$(cw_state_dir)/activity.log` — TSV written on each `Stop`.
 
-## Commit conventions
-
-Conventional commits: `type(scope): subject`. Types: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`. Scope is the script name or area (e.g. `lib`, `reset`, `install`, `spec`). Body explains motivation (WHY). No build step — bash only.
-
 ## Testing
 
-No automated test suite. Verify manually:
-1. Run `install.sh` in a fresh environment; confirm symlinks, state dir, and hooks block.
-2. Open a Claude session in tmux, run a task; confirm title progresses through `▶ 0/1 … → ▶ 1/1 … → ✓ 1/1 … → ○`.
-3. Trigger a permission prompt; confirm `!` title and bell.
-4. Open `prefix+f`; confirm picker lists the session.
-5. On Stop, confirm activity log entry at `~/.local/state/claude-tmux/activity.log`.
+Automated: `./setup.sh selftest` runs `tests/smoke.sh` (every hook against a stub tmux + picker / aggregate / orphan / AppleScript / log-rotation / stale-sentinel coverage) and `tests/install-uninstall.sh` (install reversal against a throw-away `$HOME`). CI runs both via `.github/workflows/shellcheck.yml`. Golden-path manual verify steps and commit conventions live in [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+
+## Further reading
+
+- [`HUMANS.md`](./HUMANS.md) — end-user install/usage
+- [`specs/done/claude-tmux/spec.md`](./specs/done/claude-tmux/spec.md) — requirements CT1–CT29, design decisions, traceability matrix
+- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — commit conventions, bash style, verify steps

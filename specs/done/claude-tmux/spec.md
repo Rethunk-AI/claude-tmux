@@ -155,7 +155,7 @@ These settings must be active for the integration to work correctly:
 
 **Actor:** Developer setting up a new workstation  
 **Trigger:** Developer wants the full claude-tmux system  
-**Flow:** Clone repo → `./install.sh` → restart shell → add tmux config snippet → `prefix+r` in tmux.  
+**Flow:** Clone repo → `./setup.sh install` → restart shell → add tmux config snippet → `prefix+r` in tmux.  
 **Success:** All hooks active; window titles update; `prefix+f` opens picker.
 
 ---
@@ -181,7 +181,7 @@ These settings must be active for the integration to work correctly:
 | CT13 | **Session labeling** — `claude-label <name>` sets `CLAUDE_WINDOW_LABEL` and renames current tmux window to `○ <name>`. `claude-window-status` on first `TaskCreate` uses `CLAUDE_WINDOW_LABEL` if set, else derives label from `tool_input.subject` (lowercase, spaces→hyphens, max 24 chars). Label fixed for session duration. | `claude-label foo` → window shows `○ foo`; first task creates → `▶ 0/1 foo`; second task → `▶ 0/2 foo` (label unchanged). |
 | CT14 | **Hook failure is silent** — All scripts exit 0. All `tmux rename-window` calls append `2>/dev/null \|\| true`. A missing or broken tmux session never causes a hook to return non-zero. | Kill tmux session while Claude runs → no error message from Claude Code hooks. |
 | CT15 | **Stop notification (macOS only)** — On Stop with `total > 0`, sends an `osascript` desktop notification when `osascript` is present. No Linux notification path; Linux users rely on the `■` tab title + activity log. No notification when no tasks ran. | Stop after tasks on macOS → notification shown. Linux → no notification attempted. No tasks → no notification either OS. |
-| CT16 | **install.sh** — Symlinks all scripts from `bin/` to `~/.local/bin/`, merges the hook block into `~/.claude/settings.json` using `jq` (see OQ3), and prints the tmux config snippet. Scripts use relative `source` paths (`${BASH_SOURCE[0]%/*}/claude-window-lib`) so they work from any install location. Idempotent. | Fresh system: run install.sh → hooks active after shell restart. Run again → no duplicate symlinks, no duplicate JSON keys. Symlinks point to repo; editing repo files takes effect immediately. |
+| CT16 | **setup.sh** — Single entrypoint (`install \| uninstall \| doctor \| selftest`). `install` symlinks all scripts from `bin/` to `~/.local/bin/`, merges the hook block into `~/.claude/settings.json` using `jq` (see OQ3), and prints the tmux config snippet. Scripts use relative `source` paths (`${BASH_SOURCE[0]%/*}/claude-window-lib`) so they work from any install location. Idempotent. | Fresh system: run `setup.sh install` → hooks active after shell restart. Run again → no duplicate symlinks, no duplicate JSON keys. Symlinks point to repo; editing repo files takes effect immediately. `setup.sh uninstall` reverses everything. |
 | CT17 | **tmux bell settings** — `bell-action any`, `visual-bell off`, `visual-activity off`, `visual-silence off` must be set in tmux config. `window_bell_flag` suffix (`#{?window_bell_flag,!,}`) must be removed from oh-my-tmux window status format variables to prevent `! title !` redundancy. | Permission prompt → single `!` prefix in tab, no trailing `!`. Audible bell rings. |
 | CT18 | **`automatic-rename on`** — tmux must have `automatic-rename on`. Without it, rename-window calls are silently ignored by tmux (the default is off in some distros). | Scripts set title → title visible in tab (not blank or old name). |
 
@@ -256,7 +256,7 @@ claude-tmux/
     done/
       claude-tmux/
         spec.md                # this file
-  install.sh                   # symlinks bin/, patches settings.json, wires oh-my-bash plugin
+  setup.sh                     # single entrypoint: install | uninstall | doctor | selftest
   README.md
 ```
 
@@ -300,14 +300,14 @@ claude-tmux/
 | CT13 | `shell/claude-label.bash`, `claude-window-status` | Manual; unit-testable via env var injection if needed. |
 | CT14 | all hook scripts | `set -euo pipefail` + `trap 'exit 0' ERR` + `2>/dev/null \|\| true` on tmux calls. |
 | CT15 | `claude-window-reset` | `tests/smoke.sh` — osascript stub asserts env-var delivery. Linux `notify-send` removed (see OQ4). |
-| CT16 | `install.sh` | `tests/install-uninstall.sh` asserts symlinks + hooks wiring. |
+| CT16 | `setup.sh` | `tests/install-uninstall.sh` asserts symlinks + hooks wiring. |
 | CT17 | `tmux/settings.conf`, `tmux/oh-my-tmux.conf` | `claude-tmux-doctor` warns on mismatched runtime bell-action. |
 | CT18 | `tmux/settings.conf` | `claude-tmux-doctor` fails on `automatic-rename off`. |
 | CT19 | `tmux/oh-my-tmux.conf` | Manual (color rendering). |
 | CT20 | `tmux/plain-tmux.conf` | Manual. |
 | CT21 | `claude-window-pane` | `tests/smoke.sh` — pane picker section. |
 | CT22 | `claude-window-subagent` | `tests/smoke.sh` — subagent section. |
-| CT23 | `shell/claude-label.bash`, `install.sh` | `tests/install-uninstall.sh` covers symlink wiring. |
+| CT23 | `shell/claude-label.bash`, `setup.sh` | `tests/install-uninstall.sh` covers symlink wiring. |
 | CT24 | `tmux/oh-my-tmux.conf` | Manual (glyph rendering). |
 | CT25 | `tmux/oh-my-tmux.conf` | Manual. |
 | CT26 | `claude-window-aggregate` | `tests/smoke.sh` — aggregate section (1▶ 1✓ 1■). |
@@ -321,5 +321,5 @@ claude-tmux/
 |---|----------|--------|
 | OQ1 | Should `.cwd` files be kept in `$TMPDIR` (fast, non-persistent) or `~/.local/state/claude-tmux/` (persistent across reboots, enables CT28)? | Resolved: `~/.local/state/claude-tmux/` chosen. All state files live there; orphan cleanup in picker handles stale entries. Override via `CLAUDE_TMUX_STATE_DIR`. |
 | OQ2 | `prefix+f` conflicts with oh-my-tmux's default find-window binding. Should the default shipped binding be different, with documentation on how to use `f`? | Resolved: `prefix+f` chosen as the default; documented in Design decisions. |
-| OQ3 | The install script must patch `~/.claude/settings.json`. If the user already has a `hooks` block, `jq` merge may drop existing entries or conflict. | Resolved: install.sh detects existing claude-window hooks (skips if already installed), merges per-event if a foreign hooks block exists, otherwise writes fresh. |
+| OQ3 | The install script must patch `~/.claude/settings.json`. If the user already has a `hooks` block, `jq` merge may drop existing entries or conflict. | Resolved: `setup.sh install` detects existing claude-window hooks (skips if already installed), merges per-event if a foreign hooks block exists, otherwise writes fresh. |
 | OQ4 | The `notify-send` call requires `DBUS_SESSION_BUS_ADDRESS` to be explicitly set in the hook subprocess environment on Linux (`unix:path=/run/user/$(id -u)/bus`). On non-systemd Linux distributions this path may not exist. Should the stop notification be skipped silently when D-Bus is unavailable, or should there be a fallback? | Resolved (v0.2.0): the Linux `notify-send` path was removed entirely. D-Bus discovery was fragile across Wayland, non-systemd, and SSH-remote tmux sessions, and the `■` tab symbol + activity log already provide the primary Stop signal. macOS `osascript` retained because the delivery path is deterministic. |

@@ -17,8 +17,8 @@ You will receive an acknowledgement within 72 hours. We aim to resolve confirmed
 
 claude-tmux runs locally as the invoking user. It:
 - Writes state files to `~/.local/state/claude-tmux/`
-- Reads/writes `~/.claude/settings.json` (install.sh only)
-- Invokes `tmux`, `jq`, `fzf`, and `notify-send`
+- Reads/writes `~/.claude/settings.json` (`setup.sh` only)
+- Invokes `tmux`, `jq`, `fzf`, and on macOS `osascript`
 - Does **not** make network requests
 - Does **not** store credentials or secrets
 

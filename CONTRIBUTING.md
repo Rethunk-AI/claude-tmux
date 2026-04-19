@@ -18,7 +18,7 @@ Conventional commits: `type(scope): subject`
 | `docs` | README, AGENTS.md, HUMANS.md, spec |
 | `refactor` | Internal restructure, no behavior change |
 
-Scope is the script or area: `lib`, `init`, `status`, `reset`, `notify`, `ask`, `subagent`, `restore`, `aggregate`, `log`, `install`, `spec`, `readme`.
+Scope is the script or area: `lib`, `init`, `status`, `reset`, `notify`, `ask`, `subagent`, `restore`, `aggregate`, `log`, `setup`, `doctor`, `spec`, `readme`.
 
 Body: explain WHY, not what. One logical unit per commit.
 
@@ -36,10 +36,13 @@ Pure bash — no compilation, no package manager. Scripts run directly from `bin
 
 ## Testing changes
 
-There is no automated test suite. Before opening a PR:
+Automated: `./setup.sh selftest` runs `tests/smoke.sh` and `tests/install-uninstall.sh`. CI runs both on every push via `.github/workflows/shellcheck.yml`.
 
-1. Run `./install.sh` from a clean checkout; confirm idempotency on a second run.
+Manual golden-path verify (anything UI/tmux-visible the harnesses can't assert):
+
+1. Run `./setup.sh install` twice from a clean checkout; confirm idempotency.
 2. Open a Claude session inside tmux; exercise the golden path (task create → progress → complete → stop).
-3. Trigger a permission prompt and confirm the `!` title + bell.
-4. Open `prefix+f` and confirm the session appears in the picker.
+3. Trigger a permission prompt; confirm the `!` title + bell.
+4. Open `prefix+f`; confirm the session appears in the picker.
 5. Check `claude-tmux-log` for the activity entry after stop.
+6. Run `./setup.sh doctor`; confirm zero failures.

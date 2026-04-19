@@ -8,29 +8,32 @@ For LLM/developer onboarding and internals, see [`AGENTS.md`](./AGENTS.md).
 
 - **tmux ≥ 3.2** (`display-popup` required for session picker)
 - **bash ≥ 4.0** (associative arrays)
-- **jq** — hooks merge and detection in `install.sh`
+- **jq** — hook JSON parsing + settings.json merge
 - **fzf** — session and pane pickers
 - **Claude Code CLI** — installed and in `PATH`
 
 Optional:
 - macOS `osascript` — desktop notification on session stop (macOS only)
+- `flock` — advisory file locking for concurrent hooks (stock macOS lacks it; a `mkdir`-based fallback is used automatically)
 - Nerd Font — Powerline separators in tmux status bar
-- oh-my-bash — automatic plugin discovery (install.sh handles both)
+- oh-my-bash — automatic plugin discovery (`setup.sh install` handles both)
 
 ## Install
 
 ```bash
 git clone https://github.com/Rethunk-AI/claude-tmux.git
 cd claude-tmux
-./install.sh
+./setup.sh install
 ```
 
-`install.sh` will:
+`setup.sh install` will:
 1. Symlink all `bin/` scripts to `~/.local/bin/` (idempotent)
 2. Create `~/.local/state/claude-tmux/` for persistent state + logs
 3. Patch `~/.claude/settings.json` with the Claude Code hooks block (skipped if already present; merges per-event if a foreign hooks block exists)
 4. Wire `shell/claude-label.bash` as an oh-my-bash plugin (if `~/.oh-my-bash` exists), or print a `source` line for `.bashrc`/`.zshrc`
 5. Print tmux config instructions
+
+Other `setup.sh` commands: `uninstall` (reverse of install), `doctor` (health check), `selftest` (run smoke + install/uninstall harnesses).
 
 ## Tmux config
 
@@ -45,7 +48,7 @@ source-file /path/to/claude-tmux/tmux/plain-tmux.conf
 
 ## Shell integration
 
-**oh-my-bash users:** add `claude-label` to the plugins array in `~/.bashrc` (install.sh already created the plugin symlink).
+**oh-my-bash users:** add `claude-label` to the plugins array in `~/.bashrc` (`setup.sh install` already created the plugin symlink).
 
 **Plain bash/zsh:** `source /path/to/claude-tmux/shell/claude-label.bash`
 
@@ -131,10 +134,20 @@ Runs a health check over your install: dependency versions (bash, tmux, jq, fzf,
 | `CLAUDE_TMUX_LOG_MAX_BYTES` | `1048576` (1 MiB) | Size threshold at which `activity.log` is rotated to `.1` on Stop |
 | `CLAUDE_TMUX_STOPPED_MAX_DAYS` | `30` | Stopped-session entries older than this are pruned from the picker |
 
+## State files
+
+Session state is stored in `~/.local/state/claude-tmux/` (overridable via `CLAUDE_TMUX_STATE_DIR`), keyed by tmux session+window ID (`s<sid>_w<wid>`). State survives shell restarts and tmux detach/reattach; orphaned entries are cleaned up when the session picker opens, and stopped-session entries older than `CLAUDE_TMUX_STOPPED_MAX_DAYS` (30) are pruned on the same pass. Internals are documented in [`AGENTS.md`](./AGENTS.md).
+
+## Further reading
+
+- [`AGENTS.md`](./AGENTS.md) — developer/LLM onboarding, hook wiring, state-file model
+- [`specs/done/claude-tmux/spec.md`](./specs/done/claude-tmux/spec.md) — full requirements, design decisions, traceability matrix
+- [`CHANGELOG.md`](./CHANGELOG.md) — release notes
+
 ## Uninstall
 
-1. Remove symlinks: `rm ~/.local/bin/claude-window-* ~/.local/bin/claude-tmux-log`
-2. Remove state: `rm -rf ~/.local/state/claude-tmux`
-3. Remove the hooks block from `~/.claude/settings.json` (the entries with `claude-window-` in the command)
-4. If using oh-my-bash: remove `~/.oh-my-bash/custom/plugins/claude-label/` and drop `claude-label` from your plugins array
-5. Revert your `~/.tmux.conf` or `~/.tmux.conf.local` source lines
+```bash
+./setup.sh uninstall
+```
+
+Reverses `setup.sh install`: drops the `~/.local/bin/` symlinks, strips `claude-window-*` hooks from `~/.claude/settings.json`, and removes the oh-my-bash plugin. It prints the remaining manual steps (state directory deletion if desired, tmux config revert, shell rc cleanup) at the end.
