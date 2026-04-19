@@ -1,0 +1,30 @@
+#!/bin/bash
+# Claude Code Notification hook — permission/idle indicators
+
+source "${BASH_SOURCE[0]%/*}/claude-window-lib"
+
+HOOK_DATA=$(cat)
+type=$(printf '%s' "$HOOK_DATA" | jq -r '.notification_type // ""')
+[ "$type" != "permission_prompt" ] && [ "$type" != "idle_prompt" ] && exit 0
+
+cw_resolve_window || exit 0
+cw_read_state
+
+workspace=$(basename "$(printf '%s' "$HOOK_DATA" | jq -r '.cwd // ""')")
+[ -z "$workspace" ] && workspace=$(cw_workspace)
+
+if [ "$type" = "idle_prompt" ]; then
+  symbol="·"
+else
+  symbol="!"
+  if [ -n "${TMUX_PANE:-}" ]; then
+    PANE_TTY=$(tmux display-message -t "$TMUX_PANE" -p '#{pane_tty}' 2>/dev/null)
+    [ -n "$PANE_TTY" ] && printf '\a' > "$PANE_TTY" 2>/dev/null || true
+  fi
+fi
+
+if [ "$total" -gt 0 ]; then
+  tmux rename-window -t "$WINDOW_ID" "${symbol} ${completed}/${active}${label:+ $label}" 2>/dev/null || true
+else
+  tmux rename-window -t "$WINDOW_ID" "${symbol} ${workspace}" 2>/dev/null || true
+fi

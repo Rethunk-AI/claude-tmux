@@ -1,0 +1,38 @@
+#!/bin/bash
+# Shared helpers for claude-window-* hooks
+
+# Sets WINDOW_ID and BASE. Returns 1 on failure (caller should exit).
+cw_resolve_window() {
+  [ -z "${TMUX:-}" ] && return 1
+  local pane="${TMUX_PANE:-}"
+  if [ -n "$pane" ]; then
+    WINDOW_ID=$(tmux display-message -t "$pane" -p '#{window_id}' 2>/dev/null) || return 1
+  else
+    WINDOW_ID=$(tmux display-message -p '#{window_id}' 2>/dev/null) || return 1
+  fi
+  BASE="${TMPDIR:-/tmp}/claude-window-${WINDOW_ID//[^a-zA-Z0-9_]/}"
+}
+
+# Reads counter state into global vars. Requires BASE to be set.
+cw_read_state() {
+  total=$(cat "${BASE}.total" 2>/dev/null || echo 0)
+  completed=$(cat "${BASE}.completed" 2>/dev/null || echo 0)
+  deleted=$(cat "${BASE}.deleted" 2>/dev/null || echo 0)
+  label=$(cat "${BASE}.label" 2>/dev/null || echo "")
+  active=$((total - deleted))
+}
+
+# Prints the correct progress title based on current state.
+# Requires cw_read_state and BASE to be set. Callers must ensure total > 0.
+cw_title() {
+  if [ "$active" -gt 0 ] && [ "$completed" -ge "$active" ]; then
+    printf '✓ %s/%s%s' "$active" "$active" "${label:+ $label}"
+  else
+    printf '▶ %s/%s%s' "$completed" "$active" "${label:+ $label}"
+  fi
+}
+
+# Returns the stored workspace name, falling back to $PWD basename.
+cw_workspace() {
+  basename "$(cat "${BASE}.cwd" 2>/dev/null || echo "$PWD")"
+}

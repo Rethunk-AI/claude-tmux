@@ -1,0 +1,21 @@
+#!/bin/bash
+# Claude Code Stop hook — marks window stopped, clears state for next session
+
+source "${BASH_SOURCE[0]%/*}/claude-window-lib"
+cw_resolve_window || exit 0
+cw_read_state
+
+if [ "$total" -gt 0 ]; then
+  tmux rename-window -t "$WINDOW_ID" "■ ${completed}/${active}${label:+ $label}" 2>/dev/null || true
+  export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u)/bus"
+  if command -v notify-send >/dev/null 2>&1; then
+    notify-send -u normal "Claude finished" "${label:-$(cw_workspace)} — ${completed}/${active} tasks" 2>/dev/null || true
+  elif command -v osascript >/dev/null 2>&1; then
+    osascript -e "display notification \"${label:-$(cw_workspace)} — ${completed}/${active} tasks\" with title \"Claude finished\"" 2>/dev/null || true
+  fi
+fi
+# No tasks: leave current title as-is
+
+# Clear task state; keep .cwd for the session picker; write .stopped for next boot
+rm -f "${BASE}.total" "${BASE}.started" "${BASE}.completed" "${BASE}.deleted" "${BASE}.label"
+printf '1' > "${BASE}.stopped"

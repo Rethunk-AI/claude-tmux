@@ -1,0 +1,56 @@
+#!/bin/bash
+# Claude Code PostToolUse hook — updates tmux window title
+# Triggered on TaskCreate / TaskUpdate
+
+source "${BASH_SOURCE[0]%/*}/claude-window-lib"
+
+HOOK_DATA=$(cat)
+TOOL=$(printf '%s' "$HOOK_DATA" | jq -r '.tool_name // ""')
+
+cw_resolve_window || exit 0
+cw_read_state
+
+case "$TOOL" in
+  TaskCreate)
+    total=$((total + 1))
+    active=$((total - deleted))
+    printf '%s' "$total" > "${BASE}.total"
+    if [ -z "$label" ]; then
+      if [ -n "${CLAUDE_WINDOW_LABEL:-}" ]; then
+        label="$CLAUDE_WINDOW_LABEL"
+      else
+        label=$(printf '%s' "$HOOK_DATA" \
+          | jq -r '.tool_input.subject // ""' \
+          | tr '[:upper:]' '[:lower:]' \
+          | tr ' ' '-' \
+          | cut -c1-24)
+      fi
+      printf '%s' "$label" > "${BASE}.label"
+    fi
+    ;;
+  TaskUpdate)
+    status=$(printf '%s' "$HOOK_DATA" | jq -r '.tool_input.status // ""')
+    case "$status" in
+      completed)
+        completed=$((completed + 1))
+        printf '%s' "$completed" > "${BASE}.completed"
+        ;;
+      deleted)
+        deleted=$((deleted + 1))
+        active=$((total - deleted))
+        printf '%s' "$deleted" > "${BASE}.deleted"
+        if [ "$deleted" -eq "$total" ]; then
+          rm -f "${BASE}.total" "${BASE}.started" "${BASE}.completed" "${BASE}.deleted" "${BASE}.label"
+          tmux rename-window -t "$WINDOW_ID" "○ $(cw_workspace)" 2>/dev/null || true
+          exit 0
+        fi
+        ;;
+      *)
+        exit 0
+        ;;
+    esac
+    ;;
+esac
+
+[ "$total" -eq 0 ] && exit 0
+tmux rename-window -t "$WINDOW_ID" "$(cw_title)" 2>/dev/null || true

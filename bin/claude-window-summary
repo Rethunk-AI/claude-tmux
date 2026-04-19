@@ -1,0 +1,51 @@
+#!/bin/bash
+# claude-window-summary — fzf picker for all active and recently stopped Claude sessions
+
+BASE_DIR="${TMPDIR:-/tmp}"
+
+# Build maps: sanitized_window_id → target and window name
+declare -A WIN_TARGET WIN_NAME
+while IFS= read -r line; do
+  wid=$(printf '%s' "$line" | awk '{print $1}')
+  sess=$(printf '%s' "$line" | awk '{print $2}')
+  wname=$(printf '%s' "$line" | cut -d' ' -f3-)
+  san="${wid//[^a-zA-Z0-9_]/}"
+  WIN_TARGET["$san"]="${sess}:${wid}"
+  WIN_NAME["$san"]="$wname"
+done < <(tmux list-windows -a -F '#{window_id} #{session_name} #{window_name}' 2>/dev/null)
+
+lines=()
+for f in "$BASE_DIR"/claude-window-*.cwd; do
+  [ -f "$f" ] || continue
+  key="${f%.cwd}"
+  key="${key##*/claude-window-}"
+  target="${WIN_TARGET[$key]}"
+
+  # Window no longer exists — clean up orphaned state files and skip
+  if [ -z "$target" ]; then
+    rm -f "$BASE_DIR/claude-window-${key}".{cwd,stopped,total,started,completed,deleted,label}
+    continue
+  fi
+
+  wname="${WIN_NAME[$key]}"
+  cwd=$(cat "$f" 2>/dev/null || echo "")
+  short_path="${cwd/#$HOME/~}"
+
+  lines+=("${target}	$(printf '%-36s  %s' "$wname" "$short_path")")
+done
+
+if [ "${#lines[@]}" -eq 0 ]; then
+  printf '\n  No active Claude sessions.\n\n  Press any key to close...'
+  read -r -n1
+  exit 0
+fi
+
+selected=$(printf '%s\n' "${lines[@]}" \
+  | fzf --reverse --no-sort --delimiter=$'\t' --with-nth=2 \
+      --header='WINDOW TITLE                          PATH                       — Enter to switch' \
+      --prompt='  ')
+
+[ -z "$selected" ] && exit 0
+
+target=$(printf '%s' "$selected" | cut -f1)
+tmux switch-client -t "$target" 2>/dev/null || true
