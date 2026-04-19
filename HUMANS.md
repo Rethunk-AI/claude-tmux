@@ -13,7 +13,7 @@ For LLM/developer onboarding and internals, see [`AGENTS.md`](./AGENTS.md).
 - **Claude Code CLI** — installed and in `PATH`
 
 Optional:
-- `notify-send` (Linux) — desktop notification on session stop
+- macOS `osascript` — desktop notification on session stop (macOS only)
 - Nerd Font — Powerline separators in tmux status bar
 - oh-my-bash — automatic plugin discovery (install.sh handles both)
 
@@ -92,7 +92,15 @@ claude-tmux-log -n 50   # last 50 entries
 claude-tmux-log -f       # follow mode — stream new entries as sessions stop
 ```
 
-Log is written to `~/.local/state/claude-tmux/activity.log` on each session stop.
+Log is written to `~/.local/state/claude-tmux/activity.log` on each session stop. When it exceeds `CLAUDE_TMUX_LOG_MAX_BYTES` (default 1 MiB), it is rotated to `activity.log.1`; the prior `.1` is discarded. Set the env var in your shell rc to change the cap.
+
+### Doctor
+
+```bash
+claude-tmux-doctor
+```
+
+Runs a health check over your install: dependency versions (bash, tmux, jq, fzf, optional `flock`), `~/.local/bin/` symlinks, state-dir permissions, expected hooks in `~/.claude/settings.json`, and required tmux runtime options. Exits non-zero if anything is broken.
 
 ## Window title symbols
 
@@ -101,7 +109,7 @@ Log is written to `~/.local/state/claude-tmux/activity.log` on each session stop
 | `○` | Idle / waiting for tasking |
 | `▶` | Tasks in progress |
 | `✓` | All tasks complete |
-| `■` | Session stopped (desktop notification sent) |
+| `■` | Session stopped (desktop notification sent on macOS) |
 | `!` | Waiting for permission (bell rings) |
 | `?` | Waiting for user input (AskUserQuestion) |
 | `·` | Idle prompt shown |
@@ -120,6 +128,8 @@ Log is written to `~/.local/state/claude-tmux/activity.log` on each session stop
 |----------|---------|--------|
 | `CLAUDE_WINDOW_LABEL` | — | Session label set by `claude-label`; overrides auto-derived label |
 | `CLAUDE_TMUX_STATE_DIR` | `~/.local/state/claude-tmux` | State file directory |
+| `CLAUDE_TMUX_LOG_MAX_BYTES` | `1048576` (1 MiB) | Size threshold at which `activity.log` is rotated to `.1` on Stop |
+| `CLAUDE_TMUX_STOPPED_MAX_DAYS` | `30` | Stopped-session entries older than this are pruned from the picker |
 
 ## Uninstall
 

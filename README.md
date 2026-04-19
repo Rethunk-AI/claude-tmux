@@ -5,7 +5,7 @@ Hook-driven tmux integration for Claude Code. Surfaces agent state in window tab
 ```
 ▶ 2/5 ironlaw-network   ← tasks in progress (2 of 5 done)
 ✓ 5/5 ironlaw-network   ← all tasks complete
-■ 5/5 ironlaw-network   ← session stopped (desktop notification sent)
+■ 5/5 ironlaw-network   ← session stopped (desktop notification sent on macOS)
 ! 2/5 ironlaw-network   ← waiting for permission (bell rings)
 ? 2/5 ironlaw-network   ← waiting for AskUserQuestion
 · 2/5 ironlaw-network   ← idle prompt shown
@@ -20,7 +20,7 @@ Hook-driven tmux integration for Claude Code. Surfaces agent state in window tab
 - `jq`, `fzf`
 - Claude Code CLI
 
-Optional: `notify-send` (Linux) or macOS for stop notifications, a Nerd Font for Powerline separators.
+Optional: macOS (`osascript`) for stop notifications, a Nerd Font for Powerline separators. Linux has no desktop-notification path — stop state is shown via the `■` tab title and the activity log.
 
 ## Installation
 
@@ -91,7 +91,11 @@ claude-tmux-log -n 50   # last 50 entries
 claude-tmux-log -f       # follow mode — stream new entries as sessions stop
 ```
 
-Log is written to `~/.local/state/claude-tmux/activity.log` on each Stop.
+Log is written to `~/.local/state/claude-tmux/activity.log` on each Stop. Rotated to `activity.log.1` when it exceeds `CLAUDE_TMUX_LOG_MAX_BYTES` (default 1 MiB); the prior `.1` is discarded.
+
+### Doctor
+
+`claude-tmux-doctor` validates your installation: bash/tmux/jq/fzf versions, `flock` availability, `~/.local/bin/` symlinks, state-dir permissions, every expected hook in `~/.claude/settings.json`, and tmux runtime options (`automatic-rename on`, `bell-action any`). Exits non-zero on any FAIL.
 
 ## State files
 
@@ -123,6 +127,8 @@ Session state is stored in `~/.local/state/claude-tmux/` (or `$CLAUDE_TMUX_STATE
 |----------|---------|--------|
 | `CLAUDE_WINDOW_LABEL` | — | Session label (set by `claude-label`; overrides auto-derived label) |
 | `CLAUDE_TMUX_STATE_DIR` | `~/.local/state/claude-tmux` | State file directory |
+| `CLAUDE_TMUX_LOG_MAX_BYTES` | `1048576` (1 MiB) | `activity.log` is rotated to `.1` when it exceeds this size on Stop |
+| `CLAUDE_TMUX_STOPPED_MAX_DAYS` | `30` | Stopped sessions older than this are pruned from the picker on next open |
 
 ## Spec
 
