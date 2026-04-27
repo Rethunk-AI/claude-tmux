@@ -90,3 +90,14 @@ cw_unlock() {
     exec 9>&- 2>/dev/null || true
   fi
 }
+
+# Renames tmux window with symbol-prefixed title. Symbol is shown with task progress
+# if total > 0, or workspace name if no tasks. Requires WINDOW_ID, total, and cw_workspace.
+cw_rename_symbol() {
+  local symbol="$1"
+  if [ "$total" -gt 0 ]; then
+    tmux rename-window -t "$WINDOW_ID" "${symbol} ${completed}/${active}${label:+ $label}" 2>/dev/null || true
+  else
+    tmux rename-window -t "$WINDOW_ID" "${symbol} $(cw_workspace)" 2>/dev/null || true
+  fi
+}

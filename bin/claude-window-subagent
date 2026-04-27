@@ -7,9 +7,4 @@ trap 'exit 0' ERR
 source "${BASH_SOURCE[0]%/*}/claude-window-lib"
 cw_resolve_window || exit 0
 cw_read_state
-
-if [ "$total" -gt 0 ]; then
-  tmux rename-window -t "$WINDOW_ID" "↩ ${completed}/${active}${label:+ $label}" 2>/dev/null || true
-else
-  tmux rename-window -t "$WINDOW_ID" "↩ $(cw_workspace)" 2>/dev/null || true
-fi
+cw_rename_symbol "↩"
