@@ -106,3 +106,11 @@ cw_rename_symbol() {
 cw_clear_state() {
   rm -f "${BASE}.total" "${BASE}.completed" "${BASE}.deleted" "${BASE}.label"
 }
+
+# Removes all state for a window key (used for GC of orphaned sessions).
+# Argument: state directory + key prefix (e.g. "$state_dir/claude-window-s0_w1")
+cw_remove_window_state() {
+  local prefix="$1"
+  rm -f "${prefix}".{cwd,stopped,total,completed,deleted,label,lock}
+  rmdir "${prefix}.lockd" 2>/dev/null || true
+}
