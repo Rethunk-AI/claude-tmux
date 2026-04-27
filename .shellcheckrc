@@ -1,0 +1,10 @@
+# ShellCheck configuration for claude-tmux
+# Run: shellcheck -x bin/* tests/*.sh setup.sh
+
+# Relaxed rules (disabled by default in some configs):
+# SC1083 - shellcheck directive in files (used in lib)
+# SC2034 - unused variables (sourced globals are "unused" in lib context)
+# SC2154 - undefined variables (sourced globals from lib)
+
+# Enable strict checking for all shell files
+disable=SC1091
