@@ -77,7 +77,7 @@ for name in "${EXPECTED[@]}"; do
     missing_links=$((missing_links + 1))
   fi
 done
-[ "$missing_links" -gt 0 ] && warn "re-run `setup.sh install` to repair missing symlinks"
+[ "$missing_links" -gt 0 ] && warn "re-run \`setup.sh install\` to repair missing symlinks"
 
 printf '\n== state directory ==\n'
 STATE_DIR="${CLAUDE_TMUX_STATE_DIR:-${HOME}/.local/state/claude-tmux}"
@@ -94,7 +94,7 @@ fi
 printf '\n== settings.json hooks ==\n'
 SETTINGS="${HOME}/.claude/settings.json"
 if [ ! -f "$SETTINGS" ]; then
-  fail "$SETTINGS not found; run `setup.sh install`"
+  fail "$SETTINGS not found; run \`setup.sh install\`"
 elif ! command -v jq >/dev/null 2>&1; then
   warn "jq missing — cannot parse $SETTINGS"
 else
