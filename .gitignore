@@ -12,3 +12,16 @@
 
 # Test scratch
 *.log.tmp
+
+# Shell configs (local env)
+.bash_profile
+.bashrc
+.profile
+.zprofile
+.zshrc
+
+# Tool configs (local env)
+.gitconfig
+.ripgreprc
+.mcp.json
+.claude/
