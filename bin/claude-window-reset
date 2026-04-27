@@ -50,5 +50,5 @@ if [ "$total" -gt 0 ]; then
 fi
 
 # Clear task state; keep .cwd for the session picker; write .stopped for next boot
-rm -f "${BASE}.total" "${BASE}.completed" "${BASE}.deleted" "${BASE}.label"
+cw_clear_state
 printf '1' > "${BASE}.stopped"

@@ -58,7 +58,7 @@ case "$TOOL" in
         # `-ge` (not `-eq`) so self-healing still fires if stale state on disk
         # arrived with deleted already > total (pre-clamp versions).
         if [ "$deleted" -ge "$total" ]; then
-          rm -f "${BASE}.total" "${BASE}.completed" "${BASE}.deleted" "${BASE}.label"
+          cw_clear_state
           tmux rename-window -t "$WINDOW_ID" "○ $(cw_workspace)" 2>/dev/null || true
           exit 0
         fi

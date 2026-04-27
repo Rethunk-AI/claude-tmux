@@ -101,3 +101,8 @@ cw_rename_symbol() {
     tmux rename-window -t "$WINDOW_ID" "${symbol} $(cw_workspace)" 2>/dev/null || true
   fi
 }
+
+# Clears task state files. Requires BASE to be set.
+cw_clear_state() {
+  rm -f "${BASE}.total" "${BASE}.completed" "${BASE}.deleted" "${BASE}.label"
+}
