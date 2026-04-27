@@ -18,10 +18,12 @@ cw_resolve_window() {
     wid=$(tmux display-message -p '#{window_id}' 2>/dev/null) || return 1
     sid=$(tmux display-message -p '#{session_id}' 2>/dev/null) || return 1
   fi
+  # shellcheck disable=SC2034
   WINDOW_ID="$wid"
   local state_dir
   state_dir="$(cw_state_dir)"
   mkdir -p "$state_dir"
+  # shellcheck disable=SC2034
   BASE="${state_dir}/claude-window-s${sid//[^0-9]/}_w${wid//[^0-9]/}"
 }
 
