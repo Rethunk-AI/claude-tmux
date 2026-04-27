@@ -42,7 +42,7 @@ if [ "$total" -gt 0 ]; then
   # Rotate when over cap (default 1 MiB). Keeps one .1 backup, oldest discarded.
   _cap="${CLAUDE_TMUX_LOG_MAX_BYTES:-1048576}"
   if [ -f "$_log" ]; then
-    _sz=$(wc -c < "$_log" 2>/dev/null | tr -d ' ')
+    _sz=$(wc -c < "$_log" 2>/dev/null)
     if [ -n "$_sz" ] && [ "$_sz" -gt "$_cap" ]; then
       mv -f "$_log" "${_log}.1" 2>/dev/null || true
     fi
