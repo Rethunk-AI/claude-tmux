@@ -10,8 +10,7 @@ HOOK_DATA=$(cat)
 type=$(printf '%s' "$HOOK_DATA" | jq -r '.notification_type // ""')
 [ "$type" != "permission_prompt" ] && [ "$type" != "idle_prompt" ] && exit 0
 
-cw_resolve_window || exit 0
-cw_read_state
+cw_init
 
 workspace=$(basename "$(printf '%s' "$HOOK_DATA" | jq -r '.cwd // ""')")
 [ -z "$workspace" ] && workspace=$(cw_workspace)

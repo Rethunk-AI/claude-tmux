@@ -6,6 +6,13 @@ cw_state_dir() {
   printf '%s' "${CLAUDE_TMUX_STATE_DIR:-${HOME}/.local/state/claude-tmux}"
 }
 
+# Resolve window + read state in one call. Exits if window resolution fails.
+# Sets WINDOW_ID, BASE, total, completed, deleted, label, active.
+cw_init() {
+  cw_resolve_window || exit 0
+  cw_read_state
+}
+
 # Sets WINDOW_ID and BASE. Returns 1 on failure (caller should exit).
 # BASE is keyed by session+window ID to prevent state bleed across server restarts.
 cw_resolve_window() {
