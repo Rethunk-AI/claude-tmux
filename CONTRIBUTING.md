@@ -4,6 +4,18 @@
 
 claude-tmux is a personal-workflow tool for the Rethunk-AI organization. External contributions are welcome as issues or discussions; PRs will be reviewed on a best-effort basis.
 
+## Pull requests
+
+claude-tmux is a personal-workflow tool. External PRs are reviewed on a best-effort basis.
+
+1. **Fork and branch** — create a branch with a descriptive name (`fix/counter-clamp`, `feat/bell-options`).
+2. **One logical change per PR** — keep the diff focused; large rewrites will be asked to split.
+3. **All tests green** — run `./setup.sh selftest` before opening the PR. CI runs shellcheck + smoke + install/uninstall automatically on push.
+4. **PR description** — state what the change does and why. Reference any related issue.
+5. **No external dependencies** — new scripts must stay within the declared prerequisites (`tmux`, `jq`, `fzf`, bash ≥ 4.0).
+
+Review turnaround is not guaranteed. If you need a quick response, open an issue first.
+
 ## Conventions
 
 ### Commits
