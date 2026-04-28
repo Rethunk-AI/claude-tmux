@@ -1,5 +1,9 @@
 # Security policy
 
+## Supported versions
+
+claude-tmux has not published a versioned release tag. Security fixes are applied to the `main` branch; there are no maintained LTS branches. Pull the latest commit on `main` to receive fixes.
+
 ## Reporting a vulnerability
 
 Do **not** open a public GitHub issue for security vulnerabilities.
