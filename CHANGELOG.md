@@ -20,6 +20,7 @@ All notable changes to claude-tmux follow this file. Format loosely based on
 - `claude-window-aggregate` output now separates tokens with a space (`1▶ 1✓ 1■ `), matching the documented example in README/HUMANS.
 
 ### Fixed
+- `claude-window-summary` no longer blocks on `read` when there are zero sessions (e.g. after stale-sentinel GC) unless stdin is a TTY, so smoke/CI completes.
 - Counter never goes negative in the tab title. `TaskUpdate(deleted)` with no prior `TaskCreate` is now a no-op; `deleted` and `completed` are clamped at their caps; the all-deleted cleanup uses `-ge` instead of `-eq` so stale `deleted > total` state self-heals on the next event. `cw_read_state` clamps `active` at 0 as a last-resort guard.
 
 ### Removed

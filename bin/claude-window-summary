@@ -49,8 +49,12 @@ for f in "$BASE_DIR"/claude-window-*.cwd; do
 done
 
 if [ "${#lines[@]}" -eq 0 ]; then
-  printf '\n  No active Claude sessions.\n\n  Press any key to close...'
-  read -r -n1
+  printf '\n  No active Claude sessions.\n\n'
+  # CI/smoke and other non-interactive callers have no TTY; skip blocking read.
+  if [ -t 0 ]; then
+    printf '  Press any key to close...'
+    read -r -n1
+  fi
   exit 0
 fi
 
