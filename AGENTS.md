@@ -28,8 +28,8 @@ tmux/
   plain-tmux.conf         status-right config for plain tmux
   oh-my-tmux.conf         equivalent for oh-my-tmux users
 specs/
-  index.md                table of record
-  done/claude-tmux/       spec.md (Status: implemented)
+  README.md               table of record
+  done/claude-tmux/       spec.md + tasks.md (Status: DONE)
 setup.sh                  single entrypoint: install | uninstall | doctor | selftest
 README.md
 ```
