@@ -5,6 +5,19 @@ All notable changes to claude-tmux follow this file. Format loosely based on
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-05-07
+
+### Added
+- Smoke coverage for the empty, non-interactive session-picker path so CI catches regressions where stale-sentinel GC leaves no sessions.
+
+### Changed
+- Specs now use the Citadel SDD layout: active, parked, and done areas with an index, config, and completed task record for `claude-tmux`.
+- `AGENTS.md` now points contributors at the canonical specs index for onboarding context.
+
+## [0.1.0] — 2026-05-07
+
+Initial release.
+
 ### Added
 - `setup.sh` — single entrypoint replacing `install.sh` and `uninstall.sh`. Subcommands: `install`, `uninstall`, `doctor`, `selftest`, `help`.
 - `bin/claude-tmux-doctor` — health check over deps, symlinks, state dir, hooks, and tmux runtime options.
@@ -15,23 +28,6 @@ All notable changes to claude-tmux follow this file. Format loosely based on
 - Smoke coverage for the session picker, pane picker, aggregate, orphan cleanup, session-qualified key isolation, stale-sentinel GC, the macOS `osascript` path, and log rotation.
 - `tests/install-uninstall.sh` harness, wired into CI.
 - Requirement traceability matrix (CT1–CT29) in the spec.
-
-### Changed
-- `claude-window-aggregate` output now separates tokens with a space (`1▶ 1✓ 1■ `), matching the documented example in README/HUMANS.
-
-### Fixed
-- `claude-window-summary` no longer blocks on `read` when there are zero sessions (e.g. after stale-sentinel GC) unless stdin is a TTY, so smoke/CI completes.
-- Counter never goes negative in the tab title. `TaskUpdate(deleted)` with no prior `TaskCreate` is now a no-op; `deleted` and `completed` are clamped at their caps; the all-deleted cleanup uses `-ge` instead of `-eq` so stale `deleted > total` state self-heals on the next event. `cw_read_state` clamps `active` at 0 as a last-resort guard.
-
-### Removed
-- `install.sh` and `uninstall.sh` — consolidated into `setup.sh {install|uninstall}`. No shims are shipped; invocations in existing scripts or muscle memory must switch to the new command.
-- Linux `notify-send` desktop-notification path on Stop. D-Bus discovery was fragile across Wayland, non-systemd distros, and SSH-remote tmux. The `■` tab symbol and activity-log entry remain the primary Stop signal; macOS `osascript` is retained.
-
-## [0.1.0] — 2026-04-19
-
-Initial implementation.
-
-### Added
 - Hook-driven tmux integration for Claude Code (`bin/claude-window-*`).
   - PreToolUse: session bootup indicator (`○`), AskUserQuestion waiter (`?`).
   - PostToolUse: progress counter (`▶ N/M`, `✓ N/N`) + transient-state restore.
@@ -53,10 +49,22 @@ Initial implementation.
   across tmux server restarts.
 - Orphan cleanup of state files whose tmux window no longer exists.
 
+### Changed
+- `claude-window-aggregate` output now separates tokens with a space (`1▶ 1✓ 1■ `), matching the documented example in README/HUMANS.
+
+### Fixed
+- `claude-window-summary` no longer blocks on `read` when there are zero sessions (e.g. after stale-sentinel GC) unless stdin is a TTY, so smoke/CI completes.
+- Counter never goes negative in the tab title. `TaskUpdate(deleted)` with no prior `TaskCreate` is now a no-op; `deleted` and `completed` are clamped at their caps; the all-deleted cleanup uses `-ge` instead of `-eq` so stale `deleted > total` state self-heals on the next event. `cw_read_state` clamps `active` at 0 as a last-resort guard.
+
+### Removed
+- `install.sh` and `uninstall.sh` — consolidated into `setup.sh {install|uninstall}`. No shims are shipped; invocations in existing scripts or muscle memory must switch to the new command.
+- Linux `notify-send` desktop-notification path on Stop. D-Bus discovery was fragile across Wayland, non-systemd distros, and SSH-remote tmux. The `■` tab symbol and activity-log entry remain the primary Stop signal; macOS `osascript` is retained.
+
 ### Security
 - `claude-window-reset` builds the macOS stop notification via AppleScript
   `system attribute` instead of string interpolation so labels containing
   `"` or `\` cannot escape the script literal.
 
-[Unreleased]: https://github.com/Rethunk-AI/claude-tmux/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Rethunk-AI/claude-tmux/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Rethunk-AI/claude-tmux/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Rethunk-AI/claude-tmux/releases/tag/v0.1.0
