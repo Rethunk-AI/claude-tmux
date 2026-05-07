@@ -251,13 +251,24 @@ printf '1'        > "$STATE/claude-window-s0_w0.stopped"
 touch -t "$(date -u -d '40 days ago' +%Y%m%d%H%M 2>/dev/null \
           || date -u -v-40d +%Y%m%d%H%M)" "$STATE/claude-window-s0_w0.stopped"
 export TMUX_LIST_WINDOWS_OUT=$'@0\t$0\tmain\tone'
-CLAUDE_TMUX_STOPPED_MAX_DAYS=30 "$REPO/bin/claude-window-summary" >/dev/null 2>&1 || true
+CLAUDE_TMUX_STOPPED_MAX_DAYS=30 "$REPO/bin/claude-window-summary" </dev/null >/dev/null 2>&1 || true
 if [ ! -f "$STATE/claude-window-s0_w0.cwd" ]; then
   printf '  PASS  stale stopped sentinel and siblings swept\n'
 else
   printf '  FAIL  stale stopped sentinel not swept\n' >&2; fail=1
 fi
 unset TMUX_LIST_WINDOWS_OUT
+
+# --- summary: empty non-interactive -------------------------------------
+printf '\n== summary: empty non-interactive ==\n'
+rm -f "$STATE"/claude-window-*
+out=$("$REPO/bin/claude-window-summary" </dev/null 2>&1 || true)
+if printf '%s' "$out" | grep -q 'No active Claude sessions'; then
+  printf '  PASS  summary exits cleanly without a TTY\n'
+else
+  printf '  FAIL  summary did not report empty state in non-interactive mode\n' >&2
+  fail=1
+fi
 
 # --- counter clamps: status can't drive active negative ----------------
 printf '\n== status: never go negative ==\n'
