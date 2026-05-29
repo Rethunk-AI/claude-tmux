@@ -5,6 +5,15 @@ All notable changes to claude-tmux follow this file. Format loosely based on
 
 ## [Unreleased]
 
+### Added
+- macOS CI job (`smoke-macos`): runs the smoke and install/uninstall harnesses on `macos-latest` under the BSD userland with Homebrew bash 4+, exercising the macOS-only code paths (mkdir-based lock fallback, BSD-awk `claude-tmux-log --stats`, and the osascript notification branch) that the Linux job never covered.
+
+### Fixed
+- `claude-tmux-log --stats` used the gawk-only `asorti()` for the sessions-per-day table, which aborts under the BSD awk shipped on macOS. Replaced with a portable sort so `--stats` works on macOS.
+
+### Changed
+- `bin/*` and `tests/*.sh` shebangs changed from `#!/bin/bash` to `#!/usr/bin/env bash` so the scripts run under Homebrew bash 4+ on macOS rather than the system bash 3.2 (which lacks the associative arrays the pickers and aggregate require). `setup.sh` already used this form.
+
 ## [0.3.0] — 2026-05-29
 
 ### Added
