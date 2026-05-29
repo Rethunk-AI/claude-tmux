@@ -11,19 +11,9 @@ trap 'cw_unlock' EXIT
 
 if [ "$total" -gt 0 ]; then
   tmux rename-window -t "$WINDOW_ID" "■ ${completed}/${active}${label:+ $label}" 2>/dev/null || true
-  if command -v osascript >/dev/null 2>&1; then
-    # Pipe AppleScript on stdin with body/title as env vars so user-controlled
-    # text cannot inject string literals or backslashes.
-    _body="${label:-$(cw_workspace)} — ${completed}/${active} tasks"
-    CLAUDE_TMUX_BODY="$_body" CLAUDE_TMUX_TITLE="Claude finished" \
-      osascript <<'APPLESCRIPT' 2>/dev/null || true
-on run
-  set theBody to system attribute "CLAUDE_TMUX_BODY"
-  set theTitle to system attribute "CLAUDE_TMUX_TITLE"
-  display notification theBody with title theTitle
-end run
-APPLESCRIPT
-  fi
+  # Desktop notification: macOS osascript, else OSC 777 over the pane TTY so it
+  # also reaches Linux and SSH-remote terminals (D-Bus-free). See cw_notify.
+  cw_notify "Claude finished" "${label:-$(cw_workspace)} — ${completed}/${active} tasks"
 fi
 # No tasks: leave current title as-is
 

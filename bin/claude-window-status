@@ -29,6 +29,7 @@ case "$TOOL" in
           | tr ' ' '-' \
           | cut -c1-24)
       fi
+      label="$(cw_sanitize "$label")"
       printf '%s' "$label" > "${BASE}.label"
     fi
     ;;

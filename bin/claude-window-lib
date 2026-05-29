@@ -65,6 +65,60 @@ cw_workspace() {
   basename "$(cat "${BASE}.cwd" 2>/dev/null || echo "$PWD")"
 }
 
+# Strips control characters (ESC, BEL, CR, LF, TAB, etc.) from a string so it
+# cannot corrupt a tmux window title, the TSV activity log, or a terminal
+# escape sequence. tmux >= 3.2 does single-pass format expansion, so a literal
+# `#(...)` in a name is NOT re-expanded or executed; this is display-integrity
+# hygiene (and TSV/escape safety), not a command-injection fix. Prints cleaned.
+cw_sanitize() {
+  printf '%s' "$1" | tr -d '[:cntrl:]'
+}
+
+# Emits a best-effort desktop notification. macOS: osascript, with text passed
+# via env vars so user-controlled labels cannot inject AppleScript literals.
+# Elsewhere (Linux, *BSD, and notably SSH-remote sessions where D-Bus is
+# unreachable): an OSC 777 "notify" escape written to the pane TTY, wrapped in
+# tmux passthrough so it reaches the outer terminal emulator. The escape rides
+# the terminal stream, so it works over SSH where notify-send / D-Bus do not.
+# Args: <title> <body>. Never fails the caller; requires TMUX_PANE for the OSC
+# path.
+#
+# Caveats: OSC 777/9 support is fragmented across terminals and is silently
+# ignored where unimplemented. Inside tmux the outer terminal must allow
+# passthrough (`set -g allow-passthrough on`) for the escape to surface.
+cw_notify() {
+  local title body
+  title="$(cw_sanitize "$1")"
+  body="$(cw_sanitize "$2")"
+
+  if command -v osascript >/dev/null 2>&1; then
+    CLAUDE_TMUX_TITLE="$title" CLAUDE_TMUX_BODY="$body" \
+      osascript <<'APPLESCRIPT' 2>/dev/null || true
+on run
+  set theBody to system attribute "CLAUDE_TMUX_BODY"
+  set theTitle to system attribute "CLAUDE_TMUX_TITLE"
+  display notification theBody with title theTitle
+end run
+APPLESCRIPT
+    return 0
+  fi
+
+  [ -z "${TMUX_PANE:-}" ] && return 0
+  local tty
+  tty=$(tmux display-message -t "$TMUX_PANE" -p '#{pane_tty}' 2>/dev/null) || return 0
+  [ -z "$tty" ] && return 0
+
+  # OSC 777: ESC ] 777 ; notify ; <title> ; <body> BEL
+  local osc
+  osc=$(printf '\033]777;notify;%s;%s\007' "$title" "$body")
+  if [ -n "${TMUX:-}" ]; then
+    # tmux passthrough: DCS `tmux;` <payload, each ESC doubled> ST (ESC backslash).
+    printf '\033Ptmux;%s\033\\' "${osc//$'\033'/$'\033\033'}" > "$tty" 2>/dev/null || true
+  else
+    printf '%s' "$osc" > "$tty" 2>/dev/null || true
+  fi
+}
+
 # Opens fd 9 on a per-BASE lockfile and (if `flock` is present) acquires an
 # exclusive advisory lock. Call `cw_unlock` to release.
 #
