@@ -41,9 +41,10 @@ case "$1" in
     ;;
 esac
 case "$*" in
-  *"#{window_id}"*)  printf '@0\n' ;;
-  *"#{session_id}"*) printf '$0\n' ;;
-  *"#{pane_tty}"*)   printf '/dev/null\n' ;;
+  *"#{window_id}"*)   printf '@0\n' ;;
+  *"#{session_id}"*)  printf '$0\n' ;;
+  *"#{pane_tty}"*)    printf '%s\n' "${TMUX_FAKE_TTY:-/dev/null}" ;;
+  *"#{window_name}"*) printf '%s\n' "${TMUX_FAKE_WNAME:-}" ;;
 esac
 exit 0
 STUB
@@ -309,6 +310,76 @@ else
   printf '  FAIL  deleted overflow not clamped (total=%s deleted=%s)\n' \
     "$(cat "$KEY_BASE.total" 2>/dev/null)" "$(cat "$KEY_BASE.deleted" 2>/dev/null)" >&2
   fail=1
+fi
+
+# --- session: startup shows ○ ------------------------------------------
+printf '\n== session: startup ==\n'
+rm -f "$STATE"/claude-window-*
+run claude-window-session "{\"source\":\"startup\",\"cwd\":\"$PWD\"}"
+assert 'session: startup yields ○ bootup title' 'rename-window.*○ '
+if [ "$(cat "$KEY_BASE.cwd" 2>/dev/null)" != "$PWD" ]; then
+  printf '  FAIL  session: .cwd not written on startup\n' >&2; fail=1
+fi
+
+# --- session: resume preserves active progress -------------------------
+printf '\n== session: resume ==\n'
+printf '2' > "$KEY_BASE.total"; printf '1' > "$KEY_BASE.completed"; printf '0' > "$KEY_BASE.deleted"
+rm -f "$KEY_BASE.label"
+run claude-window-session '{"source":"resume"}'
+assert 'session: resume restores ▶ progress when tasks active' 'rename-window.*▶ 1/2'
+
+# --- compact: transient ⟳ indicator ------------------------------------
+printf '\n== compact ==\n'
+run claude-window-compact
+assert 'compact: ⟳ prefix with counters' 'rename-window.*⟳ 1/2'
+
+# --- restore: skips redundant rename when title already correct --------
+printf '\n== restore: skip redundant rename ==\n'
+printf '1' > "$KEY_BASE.total"; printf '0' > "$KEY_BASE.completed"; printf '0' > "$KEY_BASE.deleted"
+rm -f "$KEY_BASE.label"
+: > "$TMUX_LOG"
+TMUX_FAKE_WNAME="▶ 0/1" "$REPO/bin/claude-window-restore"
+if grep -q 'rename-window' "$TMUX_LOG"; then
+  printf '  FAIL  restore renamed despite title already correct\n' >&2
+  sed 's/^/        /' "$TMUX_LOG" >&2; fail=1
+else
+  printf '  PASS  restore skipped rename when title already correct\n'
+fi
+: > "$TMUX_LOG"
+TMUX_FAKE_WNAME="? 0/1" "$REPO/bin/claude-window-restore"
+assert 'restore: renames away from a transient state' 'rename-window.*▶ 0/1'
+
+# --- cw_notify: OSC 777 path (non-macOS / SSH) -------------------------
+printf '\n== cw_notify: OSC 777 over pane tty ==\n'
+if command -v osascript >/dev/null 2>&1; then
+  printf '  SKIP  osascript present — macOS notify path covered by reset test\n'
+else
+  FAKE_TTY="$STUB_DIR/faketty"; : > "$FAKE_TTY"
+  ( source "$REPO/bin/claude-window-lib"
+    TMUX_FAKE_TTY="$FAKE_TTY" cw_notify "Claude finished" "demo — 1/1 tasks" )
+  if grep -aq '777;notify;Claude finished;demo — 1/1 tasks' "$FAKE_TTY"; then
+    printf '  PASS  cw_notify emitted OSC 777 notify escape to pane tty\n'
+  else
+    printf '  FAIL  cw_notify did not emit OSC 777 sequence\n' >&2; fail=1
+  fi
+fi
+
+# --- claude-tmux-log --stats -------------------------------------------
+printf '\n== log: --stats summary ==\n'
+LOGF="$STATE/activity.log"
+rm -f "$LOGF"
+{
+  printf '2026-05-26T10:00:00Z\tironlaw-network\tclaude-tmux\t5/5\n'
+  printf '2026-05-26T11:00:00Z\t(unlabeled)\tmy-project\t1/3\n'
+  printf '2026-05-27T09:00:00Z\tironlaw-network\tclaude-tmux\t2/2\n'
+} > "$LOGF"
+stats_out=$("$REPO/bin/claude-tmux-log" --stats 2>/dev/null || true)
+if printf '%s' "$stats_out" | grep -qi 'stats' \
+   && printf '%s' "$stats_out" | grep -qi 'ironlaw-network'; then
+  printf '  PASS  --stats summarizes the activity log\n'
+else
+  printf '  FAIL  --stats output missing expected summary\n' >&2
+  printf '%s\n' "$stats_out" | sed 's/^/        /' >&2; fail=1
 fi
 
 printf '\n'
