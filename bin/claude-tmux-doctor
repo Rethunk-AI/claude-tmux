@@ -57,7 +57,8 @@ BIN_DIR="${HOME}/.local/bin"
 EXPECTED=(
   claude-window-init claude-window-ask claude-window-status
   claude-window-restore claude-window-reset claude-window-subagent
-  claude-window-notify claude-window-summary claude-window-aggregate
+  claude-window-notify claude-window-session claude-window-compact
+  claude-window-summary claude-window-aggregate
   claude-window-pane claude-tmux-log claude-tmux-doctor
 )
 missing_links=0
@@ -91,6 +92,48 @@ else
   warn "$STATE_DIR does not exist yet (created on first hook fire)"
 fi
 
+printf '\n== activity log ==\n'
+log="${STATE_DIR}/activity.log"
+log_cap="${CLAUDE_TMUX_LOG_MAX_BYTES:-1048576}"
+if [ -e "$log" ]; then
+  if [ ! -r "$log" ]; then
+    fail "$log exists but is not readable"
+  else
+    log_bytes=$(wc -c < "$log")
+    log_lines=$(wc -l < "$log")
+    if [ "$log_bytes" -ge 1024 ]; then
+      pass "activity log: $((log_bytes / 1024)) KiB, ${log_lines} entries"
+    else
+      pass "activity log: ${log_bytes} bytes, ${log_lines} entries"
+    fi
+    if [ -e "${log}.1" ]; then
+      pass "rotation backup present (${log}.1)"
+    fi
+    if [ "$log_bytes" -gt "$log_cap" ]; then
+      warn "activity log (${log_bytes} bytes) exceeds cap (${log_cap}); will rotate on next Stop"
+    fi
+  fi
+else
+  warn "no activity log yet (written on first session Stop)"
+fi
+
+printf '\n== stopped-session sentinels ==\n'
+max_days="${CLAUDE_TMUX_STOPPED_MAX_DAYS:-30}"
+if [ ! -d "$STATE_DIR" ]; then
+  pass "state dir not created yet — no sentinels to check"
+else
+  stale=0
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    [ -e "${f%.stopped}.total" ] || stale=$((stale + 1))
+  done < <(find "$STATE_DIR" -maxdepth 1 -name 'claude-window-*.stopped' -mtime +"$max_days" 2>/dev/null)
+  if [ "$stale" -eq 0 ]; then
+    pass "no stale stopped-session state"
+  else
+    warn "${stale} stale stopped-session sentinel(s) (older than ${max_days}d); open the session picker (prefix+f) to GC them"
+  fi
+fi
+
 printf '\n== settings.json hooks ==\n'
 SETTINGS="${HOME}/.claude/settings.json"
 if [ ! -f "$SETTINGS" ]; then
@@ -105,6 +148,8 @@ else
     "PostToolUse:claude-window-restore"
     "Notification:claude-window-notify"
     "SubagentStop:claude-window-subagent"
+    "SessionStart:claude-window-session"
+    "PreCompact:claude-window-compact"
     "Stop:claude-window-reset"
   )
   for entry in "${want[@]}"; do
