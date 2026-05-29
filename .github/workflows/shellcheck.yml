@@ -56,16 +56,17 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      # Install bash >= 4 and jq, but keep the BSD userland (awk, date, find,
-      # sed) so this job genuinely exercises the macOS code paths: the
-      # mkdir-based lock fallback (no flock on stock macOS), the BSD-awk
-      # claude-tmux-log --stats program, and the osascript notification branch.
-      # Prepending the Homebrew bin to PATH makes `bash` / `env bash` resolve to
-      # 4+ while everything else stays BSD. fzf and tmux are stubbed by the
-      # harness, so they are not installed.
-      - name: Install bash >= 4 and jq
+      # Install bash >= 4 plus the runtime deps, but keep the BSD userland
+      # (awk, date, find, sed) so this job genuinely exercises the macOS code
+      # paths: the mkdir-based lock fallback (no flock on stock macOS), the
+      # BSD-awk claude-tmux-log --stats program, and the osascript notification
+      # branch. Prepending the Homebrew bin to PATH makes `bash` / `env bash`
+      # resolve to 4+ while everything else stays BSD. The hook smoke harness
+      # stubs tmux/fzf, but the install/uninstall harness runs setup.sh for
+      # real, whose preflight requires jq, fzf, and tmux to be present.
+      - name: Install bash >= 4 and runtime deps
         run: |
-          brew install bash jq
+          brew install bash jq fzf tmux
           echo "$(brew --prefix)/bin" >> "$GITHUB_PATH"
 
       - name: Confirm bash >= 4
