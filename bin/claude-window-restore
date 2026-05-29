@@ -9,8 +9,13 @@ source "${BASH_SOURCE[0]%/*}/claude-window-lib"
 cw_init
 
 if [ "$total" -eq 0 ]; then
-  tmux rename-window -t "$WINDOW_ID" "○ $(cw_workspace)" 2>/dev/null || true
-  exit 0
+  desired="○ $(cw_workspace)"
+else
+  desired="$(cw_title)"
 fi
 
-tmux rename-window -t "$WINDOW_ID" "$(cw_title)" 2>/dev/null || true
+current=$(tmux display-message -t "$WINDOW_ID" -p '#{window_name}' 2>/dev/null || echo "")
+
+if [ "$current" != "$desired" ]; then
+  tmux rename-window -t "$WINDOW_ID" "$desired" 2>/dev/null || true
+fi
