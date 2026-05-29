@@ -1,5 +1,7 @@
 # claude-tmux
 
+[![shellcheck](https://github.com/Rethunk-AI/claude-tmux/actions/workflows/shellcheck.yml/badge.svg)](https://github.com/Rethunk-AI/claude-tmux/actions/workflows/shellcheck.yml)
+
 Hook-driven tmux integration for Claude Code. Surfaces agent state in window tab titles, rings an audible bell on permission prompts, and provides a fuzzy session picker across all Claude windows.
 
 ```

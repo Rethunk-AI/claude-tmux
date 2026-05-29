@@ -5,6 +5,8 @@ All notable changes to claude-tmux follow this file. Format loosely based on
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-05-29
+
 ### Added
 - `SessionStart` hook wired to `claude-window-session`: shows `○` indicator immediately at session start; on `resume`/`compact` restores the correct `▶`/`○` title without clobbering active task state.
 - `PreCompact` hook wired to `claude-window-compact`: sets transient `⟳` window title while context compaction runs; clears back to normal progress/idle title on the next tool call.
@@ -79,6 +81,7 @@ Initial release.
   `system attribute` instead of string interpolation so labels containing
   `"` or `\` cannot escape the script literal.
 
-[Unreleased]: https://github.com/Rethunk-AI/claude-tmux/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Rethunk-AI/claude-tmux/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/Rethunk-AI/claude-tmux/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Rethunk-AI/claude-tmux/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Rethunk-AI/claude-tmux/releases/tag/v0.1.0
