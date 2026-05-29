@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # claude-window-pane — fzf picker for all tmux panes across all sessions
 
 set -euo pipefail

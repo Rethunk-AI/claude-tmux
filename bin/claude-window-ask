@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Claude Code PreToolUse hook — question-waiting indicator for AskUserQuestion
 
 set -euo pipefail

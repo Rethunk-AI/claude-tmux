@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # tests/install-uninstall.sh — run `setup.sh install` + `setup.sh uninstall`
 # against a throw-away $HOME and assert that uninstall reverses install for
 # symlinks and the settings.json hooks block.

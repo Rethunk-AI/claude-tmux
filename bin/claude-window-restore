@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Claude Code PostToolUse hook — restores correct title after any tool
 # Clears transient states like '?' and '!' back to the real progress state
 

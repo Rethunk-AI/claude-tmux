@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # claude-window-summary — fzf picker for all active and recently stopped Claude sessions
 
 set -euo pipefail

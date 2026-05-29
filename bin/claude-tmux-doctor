@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # claude-tmux-doctor — diagnose a claude-tmux installation
 #
 # Checks:

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Claude Code Notification hook — permission/idle indicators
 
 set -euo pipefail

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Shared helpers for claude-window-* hooks
 
 # Returns the state directory (persistent storage for all session state + logs).

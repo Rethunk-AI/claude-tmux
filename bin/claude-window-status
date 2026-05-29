@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Claude Code PostToolUse hook — updates tmux window title
 # Triggered on TaskCreate / TaskUpdate
 

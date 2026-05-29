@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Claude Code SessionStart hook — boot/resume indicator before any tool runs
 
 set -euo pipefail

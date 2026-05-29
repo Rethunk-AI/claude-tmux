@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Claude Code PreToolUse hook — session bootup indicator + CWD tracking
 # Fires on every tool call; exits early if tasks are active
 

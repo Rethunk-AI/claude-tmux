@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Claude Code Stop hook — marks window stopped, clears state for next session
 
 set -euo pipefail

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # claude-tmux-log — view the claude-tmux session activity log
 # Usage: claude-tmux-log [-n N] [-f] [--stats|-s]
 
@@ -69,11 +69,22 @@ do_stats() {
       printf "  %-22s %s\n",    "Latest date:",       latest
       print ""
 
-      # Sessions per UTC day (sorted ascending)
-      n_dates = asorti(day_count, sorted_dates)
+      # Sessions per UTC day (sorted ascending) — portable, no gawk asorti.
+      # ISO YYYY-MM-DD keys sort correctly under string comparison.
+      n_dates = 0
+      for (d in day_count) {
+        date_keys[++n_dates] = d
+      }
+      for (i = 1; i <= n_dates; i++) {
+        for (j = i + 1; j <= n_dates; j++) {
+          if (date_keys[j] < date_keys[i]) {
+            tmp = date_keys[i]; date_keys[i] = date_keys[j]; date_keys[j] = tmp
+          }
+        }
+      }
       print "  Sessions per day:"
       for (i = 1; i <= n_dates; i++) {
-        d = sorted_dates[i]
+        d = date_keys[i]
         printf "    %-12s  %d\n", d, day_count[d]
       }
       print ""

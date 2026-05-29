@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # claude-window-aggregate — compact active Claude window count for tmux status-right
 # Usage in tmux: set -g status-right '#(~/.local/bin/claude-window-aggregate) ...'
 # Output example: "2▶ 1✓ 1■ "

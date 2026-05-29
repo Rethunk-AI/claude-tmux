@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # tests/smoke.sh — fire each hook against a stub tmux and assert the expected
 # rename-window argument was emitted. Covers the hook scripts only; the fzf
 # pickers (summary, pane) and status-right aggregate are manual-only.
@@ -21,7 +21,7 @@ trap cleanup EXIT
 # $TMUX_LIST_WINDOWS_OUT / $TMUX_LIST_PANES_OUT so the pickers and aggregate
 # can be exercised. All other subcommands no-op and return 0.
 cat > "$STUB_DIR/tmux" <<'STUB'
-#!/bin/bash
+#!/usr/bin/env bash
 printf 'tmux %s\n' "$*" >> "$TMUX_LOG"
 case "$1" in
   list-windows)
@@ -52,7 +52,7 @@ chmod +x "$STUB_DIR/tmux"
 
 # --- fzf stub: print the first input line ---
 cat > "$STUB_DIR/fzf" <<'STUB'
-#!/bin/bash
+#!/usr/bin/env bash
 head -n 1
 STUB
 chmod +x "$STUB_DIR/fzf"
@@ -212,7 +212,7 @@ printf '1'        > "$STATE/claude-window-s0_w0.total"
 printf '1'        > "$STATE/claude-window-s0_w0.completed"
 OSASCRIPT_LOG="$STUB_DIR/osascript.log"
 cat > "$STUB_DIR/osascript" <<OSA
-#!/bin/bash
+#!/usr/bin/env bash
 printf 'body=%s title=%s\n' "\${CLAUDE_TMUX_BODY:-}" "\${CLAUDE_TMUX_TITLE:-}" > "$OSASCRIPT_LOG"
 exit 0
 OSA

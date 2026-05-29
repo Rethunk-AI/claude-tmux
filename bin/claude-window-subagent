@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Claude Code SubagentStop hook — briefly marks window when a subagent finishes
 
 set -euo pipefail
