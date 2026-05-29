@@ -1,6 +1,6 @@
 #!/bin/bash
 # claude-tmux-log — view the claude-tmux session activity log
-# Usage: claude-tmux-log [-n N]   (default: last 25 entries)
+# Usage: claude-tmux-log [-n N] [-f] [--stats|-s]
 
 set -euo pipefail
 
@@ -9,16 +9,130 @@ log="$(cw_state_dir)/activity.log"
 
 n=25
 follow=0
+stats=0
 while [ $# -gt 0 ]; do
   case "${1:-}" in
     -n) n="${2:-25}"; shift 2 ;;
     -f) follow=1; shift ;;
+    --stats|-s) stats=1; shift ;;
     *)  break ;;
   esac
 done
 
 if [ ! -f "$log" ]; then
   printf 'No activity log found at %s\n' "$log" >&2
+  exit 0
+fi
+
+do_stats() {
+  awk -F'\t' '
+    NF < 4 { next }
+    {
+      ts   = $1; label = $2; ws = $3; tasks = $4
+      # Extract UTC date: first 10 chars of ISO-8601 timestamp
+      date = substr(ts, 1, 10)
+      if (date !~ /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/) next
+
+      total_sessions++
+
+      # Date range
+      if (earliest == "" || date < earliest) earliest = date
+      if (latest   == "" || date > latest)   latest   = date
+
+      # Sessions per day
+      day_count[date]++
+
+      # Label counts (collapse empty to "(unlabeled)")
+      l = (label == "" || label == "(unlabeled)") ? "(unlabeled)" : label
+      label_count[l]++
+
+      # Workspace counts
+      ws_count[ws]++
+
+      # Task aggregates: parse "completed/active"
+      n = split(tasks, parts, "/")
+      if (n == 2 && parts[1] ~ /^[0-9]+$/ && parts[2] ~ /^[0-9]+$/) {
+        sum_completed += parts[1]
+        sum_active    += parts[2]
+      }
+    }
+    END {
+      if (total_sessions == 0) {
+        print "No valid sessions found in activity log."
+        exit 0
+      }
+
+      print "== claude-tmux activity stats =="
+      print ""
+      printf "  %-22s %d\n",    "Total sessions:",    total_sessions
+      printf "  %-22s %s\n",    "Earliest date:",     earliest
+      printf "  %-22s %s\n",    "Latest date:",       latest
+      print ""
+
+      # Sessions per UTC day (sorted ascending)
+      n_dates = asorti(day_count, sorted_dates)
+      print "  Sessions per day:"
+      for (i = 1; i <= n_dates; i++) {
+        d = sorted_dates[i]
+        printf "    %-12s  %d\n", d, day_count[d]
+      }
+      print ""
+
+      # Top labels (descending by count) — simple insertion sort
+      n_labels = 0
+      for (l in label_count) {
+        label_keys[++n_labels] = l
+      }
+      # bubble sort descending
+      for (i = 1; i <= n_labels; i++) {
+        for (j = i + 1; j <= n_labels; j++) {
+          if (label_count[label_keys[j]] > label_count[label_keys[i]]) {
+            tmp = label_keys[i]; label_keys[i] = label_keys[j]; label_keys[j] = tmp
+          }
+        }
+      }
+      print "  Top labels:"
+      for (i = 1; i <= n_labels; i++) {
+        l = label_keys[i]
+        printf "    %-26s  %d\n", l, label_count[l]
+      }
+      print ""
+
+      # Top workspaces (descending by count)
+      n_ws = 0
+      for (w in ws_count) {
+        ws_keys[++n_ws] = w
+      }
+      for (i = 1; i <= n_ws; i++) {
+        for (j = i + 1; j <= n_ws; j++) {
+          if (ws_count[ws_keys[j]] > ws_count[ws_keys[i]]) {
+            tmp = ws_keys[i]; ws_keys[i] = ws_keys[j]; ws_keys[j] = tmp
+          }
+        }
+      }
+      print "  Top workspaces:"
+      for (i = 1; i <= n_ws; i++) {
+        w = ws_keys[i]
+        printf "    %-26s  %d\n", w, ws_count[w]
+      }
+      print ""
+
+      # Aggregate task stats
+      if (sum_active > 0) {
+        ratio = int(sum_completed * 100 / sum_active)
+      } else {
+        ratio = 0
+      }
+      print "  Aggregate tasks:"
+      printf "    %-22s %d\n", "Total completed:",   sum_completed
+      printf "    %-22s %d\n", "Total active:",      sum_active
+      printf "    %-22s %d%%\n","Completion ratio:",  ratio
+    }
+  ' "$log"
+}
+
+if [ "$stats" -eq 1 ]; then
+  do_stats
   exit 0
 fi
 
