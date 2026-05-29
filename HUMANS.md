@@ -13,7 +13,7 @@ For LLM/developer onboarding and internals, see [`AGENTS.md`](./AGENTS.md).
 - **Claude Code CLI** — installed and in `PATH`
 
 Optional:
-- macOS `osascript` — desktop notification on session stop (macOS only)
+- macOS `osascript` — desktop notification on session stop (macOS path; Linux/BSD/SSH uses OSC 777 terminal escape, no extra dependency required)
 - `flock` — advisory file locking for concurrent hooks (stock macOS lacks it; a `mkdir`-based fallback is used automatically)
 - Nerd Font — Powerline separators in tmux status bar
 - oh-my-bash — automatic plugin discovery (`setup.sh install` handles both)
@@ -93,6 +93,8 @@ Example output: `2▶ 1✓ 1■ ` (2 in progress, 1 complete, 1 stopped)
 claude-tmux-log          # recent 25 sessions
 claude-tmux-log -n 50   # last 50 entries
 claude-tmux-log -f       # follow mode — stream new entries as sessions stop
+claude-tmux-log --stats  # summary: total sessions, date range, per-day counts, top labels/workspaces, task completion rate
+claude-tmux-log -s       # alias for --stats
 ```
 
 Log is written to `~/.local/state/claude-tmux/activity.log` on each session stop. When it exceeds `CLAUDE_TMUX_LOG_MAX_BYTES` (default 1 MiB), it is rotated to `activity.log.1`; the prior `.1` is discarded. Set the env var in your shell rc to change the cap.
@@ -103,7 +105,7 @@ Log is written to `~/.local/state/claude-tmux/activity.log` on each session stop
 claude-tmux-doctor
 ```
 
-Runs a health check over your install: dependency versions (bash, tmux, jq, fzf, optional `flock`), `~/.local/bin/` symlinks, state-dir permissions, expected hooks in `~/.claude/settings.json`, and required tmux runtime options. Exits non-zero if anything is broken.
+Runs a health check over your install: dependency versions (bash, tmux, jq, fzf, optional `flock`), `~/.local/bin/` symlinks, state-dir permissions, expected hooks in `~/.claude/settings.json`, required tmux runtime options, activity-log health (size, entry count, rotation backup), and stale stopped-session sentinels (warns about `.stopped` state older than `CLAUDE_TMUX_STOPPED_MAX_DAYS` that the picker will GC). Exits non-zero if anything is broken.
 
 ## Window title symbols
 
@@ -112,11 +114,23 @@ Runs a health check over your install: dependency versions (bash, tmux, jq, fzf,
 | `○` | Idle / waiting for tasking |
 | `▶` | Tasks in progress |
 | `✓` | All tasks complete |
-| `■` | Session stopped (desktop notification sent on macOS) |
+| `■` | Session stopped (desktop notification sent — see [Desktop notifications](#desktop-notifications)) |
 | `!` | Waiting for permission (bell rings) |
 | `?` | Waiting for user input (AskUserQuestion) |
 | `·` | Idle prompt shown |
 | `↩` | Subagent just returned |
+| `⟳` | Context compaction running (transient; clears on next tool call) |
+
+## Desktop notifications
+
+When a Claude Code session stops (the `■` state), claude-tmux emits a desktop notification:
+
+- **macOS** — uses `osascript` (bundled with macOS, no extra dependency).
+- **Linux, \*BSD, and SSH sessions** — writes an OSC 777 terminal escape sequence directly to the pane's TTY. Because the escape rides the terminal stream it works transparently over SSH, where the previously-used `notify-send`/D-Bus approach failed.
+
+**Caveats:**
+- OSC 9/777 support is fragmented; terminals that do not implement it silently ignore the escape.
+- Inside a tmux session the outer terminal must have passthrough enabled — add `set -g allow-passthrough on` to your `~/.tmux.conf` — for the escape to surface to the host terminal.
 
 ## Key bindings
 

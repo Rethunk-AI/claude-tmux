@@ -10,6 +10,7 @@ Hook-driven tmux integration for Claude Code. Surfaces agent state in window tab
 ? 2/5 ironlaw-network   ← waiting for AskUserQuestion
 · 2/5 ironlaw-network   ← idle prompt shown
 ↩ 2/5 ironlaw-network   ← subagent just returned
+⟳ 2/5 ironlaw-network   ← compacting context
 ○ bastion               ← idle, no tasks
 ```
 

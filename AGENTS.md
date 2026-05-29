@@ -10,12 +10,14 @@
 bin/
   claude-window-lib       shared helpers (source this, don't run it)
   claude-window-init      PreToolUse: resolve window, write .cwd file
+  claude-window-session   SessionStart: show ○ immediately; restore ▶/○ on resume/compact
+  claude-window-compact   PreCompact: set transient ⟳ title while context compaction runs
   claude-window-status    PostToolUse(TaskCreate|TaskUpdate): update progress title
   claude-window-restore   PostToolUse(.*): restore non-task title
   claude-window-notify    Notification: ring bell (macOS: also osascript)
   claude-window-subagent  SubagentStop: set ↩ title
   claude-window-ask       PreToolUse(AskUserQuestion): set ? title
-  claude-window-reset     Stop: write activity log, reset title, macOS stop notification
+  claude-window-reset     Stop: write activity log, reset title, cross-platform stop notification (cw_notify)
   claude-window-aggregate reads state dir, emits compact in-progress/complete/stopped counts for status-right
   claude-window-pane      fzf pane picker across all sessions (launched by tmux binding)
   claude-window-summary   fzf session picker (launched by tmux binding)
@@ -40,13 +42,18 @@ README.md
 - State is stored under **`~/.local/state/claude-tmux/`** (or `$CLAUDE_TMUX_STATE_DIR`). `cw_state_dir()` in the lib is the single source of truth.
 - BASE key formula: **`claude-window-s${session_id_digits}_w${window_id_digits}`** (e.g. `claude-window-s0_w3`). The session_id prefix prevents stale state bleed when tmux recycles window IDs after a server restart. `cw_resolve_window()` in the lib sets both `WINDOW_ID` and `BASE`.
 - `claude-window-summary` must use the identical key formula when scanning state files and mapping them to live windows via `tmux list-windows -a -F $'#{window_id}\t#{session_id}\t#{session_name}\t#{window_name}'` (tab-delimited so session / window names containing spaces parse cleanly).
+- **`cw_sanitize <string>`** — strips control characters from a string before it is used in display or written to TSV state files. Note: tmux ≥ 3.2 single-pass expansion already prevents `#(...)` execution in window names, so this is defense-in-depth hygiene, not an injection fix. Task labels are passed through `cw_sanitize` before being persisted.
+- **`cw_notify <title> <body>`** — cross-platform desktop notification: `osascript` on macOS; OSC 777 terminal escape written to the pane TTY on all other platforms (works over SSH; silently ignored by terminals that do not implement OSC 777).
+- `claude-window-restore` skips the `tmux rename-window` call when the current window title already matches the target — reduces title flicker on high-frequency PostToolUse events.
 
 ## Hook events → scripts
 
 | Claude Code event | Matcher | Script |
 |-------------------|---------|--------|
+| `SessionStart` | — | `claude-window-session` |
 | `PreToolUse` | `.*` | `claude-window-init` |
 | `PreToolUse` | `AskUserQuestion` | `claude-window-ask` |
+| `PreCompact` | — | `claude-window-compact` |
 | `PostToolUse` | `TaskCreate\|TaskUpdate` | `claude-window-status` |
 | `PostToolUse` | `.*` | `claude-window-restore` |
 | `Notification` | — | `claude-window-notify` |

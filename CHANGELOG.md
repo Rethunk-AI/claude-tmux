@@ -5,6 +5,20 @@ All notable changes to claude-tmux follow this file. Format loosely based on
 
 ## [Unreleased]
 
+### Added
+- `SessionStart` hook wired to `claude-window-session`: shows `○` indicator immediately at session start; on `resume`/`compact` restores the correct `▶`/`○` title without clobbering active task state.
+- `PreCompact` hook wired to `claude-window-compact`: sets transient `⟳` window title while context compaction runs; clears back to normal progress/idle title on the next tool call.
+- `⟳` window title symbol for context compaction in progress.
+- Cross-platform desktop notification on session stop via `cw_notify`: macOS uses `osascript` (unchanged); Linux, \*BSD, and SSH sessions now use an OSC 777 terminal escape written to the pane TTY. Restores Linux notification capability removed in 0.1.0; the OSC mechanism works over SSH where the prior `notify-send`/D-Bus approach failed. Caveat: OSC 9/777 support is terminal-dependent and silently ignored when absent; inside tmux, `set -g allow-passthrough on` is required.
+- `claude-tmux-log --stats` / `-s`: prints an activity summary (total sessions, date range, sessions per UTC day, top labels, top workspaces, aggregate task completion rate) instead of tailing the log.
+- `claude-tmux-doctor` now checks activity-log health (size, entry count, rotation-backup presence, over-cap warning) and warns about stale `.stopped` sentinels older than `CLAUDE_TMUX_STOPPED_MAX_DAYS` that the picker will GC.
+- `cw_sanitize` helper in the shared lib: strips control characters from strings for display/TSV hygiene (defense-in-depth; tmux ≥ 3.2 single-pass expansion already prevents `#(...)` execution).
+- `cw_notify` helper in the shared lib: encapsulates the cross-platform notification logic described above.
+
+### Changed
+- `claude-window-restore` (PostToolUse `.*`) skips the `tmux rename-window` call when the window title already matches the target, reducing title flicker on high-frequency tool events.
+- Task labels are passed through `cw_sanitize` before being persisted to state files.
+
 ## [0.2.0] — 2026-05-07
 
 ### Added
