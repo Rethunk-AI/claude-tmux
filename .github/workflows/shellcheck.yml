@@ -25,6 +25,8 @@ jobs:
             bin/claude-window-reset \
             bin/claude-window-subagent \
             bin/claude-window-notify \
+            bin/claude-window-session \
+            bin/claude-window-compact \
             bin/claude-window-summary \
             bin/claude-window-aggregate \
             bin/claude-window-pane \

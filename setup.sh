@@ -27,6 +27,8 @@ EXECUTABLES=(
   claude-window-reset
   claude-window-subagent
   claude-window-notify
+  claude-window-session
+  claude-window-compact
   claude-window-summary
   claude-window-aggregate
   claude-window-pane
@@ -130,6 +132,8 @@ install_hooks() {
   ],
   "Notification": [{"hooks": [{"type": "command", "command": "bash ~/.local/bin/claude-window-notify"}]}],
   "SubagentStop":  [{"hooks": [{"type": "command", "command": "bash ~/.local/bin/claude-window-subagent"}]}],
+  "SessionStart":  [{"hooks": [{"type": "command", "command": "bash ~/.local/bin/claude-window-session"}]}],
+  "PreCompact":    [{"hooks": [{"type": "command", "command": "bash ~/.local/bin/claude-window-compact"}]}],
   "Stop":          [{"hooks": [{"type": "command", "command": "bash ~/.local/bin/claude-window-reset"}]}]
 }
 HOOKS

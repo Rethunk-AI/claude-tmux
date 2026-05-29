@@ -1,0 +1,32 @@
+#!/bin/bash
+# Claude Code SessionStart hook — boot/resume indicator before any tool runs
+
+set -euo pipefail
+trap 'exit 0' ERR
+
+source "${BASH_SOURCE[0]%/*}/claude-window-lib"
+
+input=$(cat)
+src=$(printf '%s' "$input" | jq -r '.source // ""')
+cwd=$(printf '%s' "$input" | jq -r '.cwd // ""')
+
+cw_resolve_window || exit 0
+cw_read_state
+
+case "$src" in
+  startup|clear)
+    printf '%s' "${cwd:-$PWD}" > "${BASE}.cwd"
+    rm -f "${BASE}.stopped"
+    tmux rename-window -t "$WINDOW_ID" "○ $(cw_workspace)" 2>/dev/null || true
+    ;;
+  resume|compact)
+    # shellcheck disable=SC2154
+    if [ "$total" -gt 0 ]; then
+      tmux rename-window -t "$WINDOW_ID" "$(cw_title)" 2>/dev/null || true
+    else
+      tmux rename-window -t "$WINDOW_ID" "○ $(cw_workspace)" 2>/dev/null || true
+    fi
+    ;;
+  *)
+    ;;
+esac
