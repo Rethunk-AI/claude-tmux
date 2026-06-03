@@ -26,7 +26,7 @@ else
 fi
 
 if [ "$total" -gt 0 ]; then
-  tmux rename-window -t "$WINDOW_ID" "${symbol} ${completed}/${active}${label:+ $label}" 2>/dev/null || true
+  cw_rename_transient "${symbol} ${completed}/${active}${label:+ $label}"
 else
-  tmux rename-window -t "$WINDOW_ID" "${symbol} ${workspace}" 2>/dev/null || true
+  cw_rename_transient "${symbol} ${workspace}"
 fi

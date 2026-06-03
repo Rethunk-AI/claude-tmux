@@ -10,7 +10,7 @@ cw_lock
 trap 'cw_unlock' EXIT
 
 if [ "$total" -gt 0 ]; then
-  tmux rename-window -t "$WINDOW_ID" "■ ${completed}/${active}${label:+ $label}" 2>/dev/null || true
+  cw_rename_desired "■ ${completed}/${active}${label:+ $label}"
   # Desktop notification: macOS osascript, else OSC 777 over the pane TTY so it
   # also reaches Linux and SSH-remote terminals (D-Bus-free). See cw_notify.
   cw_notify "Claude finished" "${label:-$(cw_workspace)} — ${completed}/${active} tasks"

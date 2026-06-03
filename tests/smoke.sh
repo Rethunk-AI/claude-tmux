@@ -12,8 +12,7 @@ STATE="$(mktemp -d -t claude-tmux-smoke-state.XXXXXX)"
 STUB_DIR="$(mktemp -d -t claude-tmux-smoke-stub.XXXXXX)"
 TMUX_LOG="$STUB_DIR/tmux.log"
 
-cleanup() { rm -rf "$STATE" "$STUB_DIR"; }
-trap cleanup EXIT
+trap 'rm -rf "$STATE" "$STUB_DIR"' EXIT
 
 # --- tmux stub -----------------------------------------------------------
 # Logs every invocation. Answers display-message queries so cw_resolve_window
@@ -282,7 +281,9 @@ if [ ! -f "$KEY_BASE.deleted" ] && [ ! -f "$KEY_BASE.total" ]; then
   printf '  PASS  TaskUpdate(deleted) with total=0 is a no-op\n'
 else
   printf '  FAIL  TaskUpdate(deleted) wrote counters despite total=0\n' >&2
-  ls "$STATE"/claude-window-s0_w0.* 2>/dev/null | sed 's/^/        /' >&2
+  for state_file in "$STATE"/claude-window-s0_w0.*; do
+    [ -e "$state_file" ] && printf '        %s\n' "$state_file" >&2
+  done
   fail=1
 fi
 
@@ -336,16 +337,18 @@ assert 'compact: ⟳ prefix with counters' 'rename-window.*⟳ 1/2'
 # --- restore: skips redundant rename when title already correct --------
 printf '\n== restore: skip redundant rename ==\n'
 printf '1' > "$KEY_BASE.total"; printf '0' > "$KEY_BASE.completed"; printf '0' > "$KEY_BASE.deleted"
-rm -f "$KEY_BASE.label"
+rm -f "$KEY_BASE.label" "$KEY_BASE.transient"
+printf '▶ 0/1' > "$KEY_BASE.title"
 : > "$TMUX_LOG"
 TMUX_FAKE_WNAME="▶ 0/1" "$REPO/bin/claude-window-restore"
-if grep -q 'rename-window' "$TMUX_LOG"; then
-  printf '  FAIL  restore renamed despite title already correct\n' >&2
+if grep -q '#{window_name}\|rename-window' "$TMUX_LOG"; then
+  printf '  FAIL  restore missed cached no-op fast path\n' >&2
   sed 's/^/        /' "$TMUX_LOG" >&2; fail=1
 else
-  printf '  PASS  restore skipped rename when title already correct\n'
+  printf '  PASS  restore skipped tmux title lookup when cache is current\n'
 fi
 : > "$TMUX_LOG"
+printf '1' > "$KEY_BASE.transient"
 TMUX_FAKE_WNAME="? 0/1" "$REPO/bin/claude-window-restore"
 assert 'restore: renames away from a transient state' 'rename-window.*▶ 0/1'
 

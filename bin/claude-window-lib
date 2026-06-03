@@ -60,6 +60,45 @@ cw_title() {
   fi
 }
 
+# Records the last stable title so the broad restore hook can skip tmux
+# window-name reads when no transient indicator needs clearing.
+cw_cache_title() {
+  printf '%s' "$1" > "${BASE}.title" 2>/dev/null || true
+  rm -f "${BASE}.transient" 2>/dev/null || true
+}
+
+# Stable title updates are the normal desired state for the window.
+cw_rename_desired() {
+  local title="$1"
+  cw_cache_title "$title"
+  tmux rename-window -t "$WINDOW_ID" "$title" 2>/dev/null || true
+}
+
+# Transient title updates are cleared by claude-window-restore after the next
+# tool completes.
+cw_rename_transient() {
+  local title="$1"
+  : > "${BASE}.transient" 2>/dev/null || true
+  tmux rename-window -t "$WINDOW_ID" "$title" 2>/dev/null || true
+}
+
+# Restores the stable title, avoiding the expensive tmux current-title lookup
+# when our cache already says the window is in the desired stable state.
+cw_restore_desired() {
+  local desired="$1" cached=""
+  cached=$(cat "${BASE}.title" 2>/dev/null || echo "")
+  if [ ! -f "${BASE}.transient" ] && [ "$cached" = "$desired" ]; then
+    return 0
+  fi
+
+  local current
+  current=$(tmux display-message -t "$WINDOW_ID" -p '#{window_name}' 2>/dev/null || echo "")
+  if [ "$current" != "$desired" ]; then
+    tmux rename-window -t "$WINDOW_ID" "$desired" 2>/dev/null || true
+  fi
+  cw_cache_title "$desired"
+}
+
 # Returns the stored workspace name, falling back to $PWD basename.
 cw_workspace() {
   basename "$(cat "${BASE}.cwd" 2>/dev/null || echo "$PWD")"
@@ -113,7 +152,7 @@ APPLESCRIPT
   osc=$(printf '\033]777;notify;%s;%s\007' "$title" "$body")
   if [ -n "${TMUX:-}" ]; then
     # tmux passthrough: DCS `tmux;` <payload, each ESC doubled> ST (ESC backslash).
-    printf '\033Ptmux;%s\033\\' "${osc//$'\033'/$'\033\033'}" > "$tty" 2>/dev/null || true
+    printf "%b%s%b\\\\" '\033Ptmux;' "${osc//$'\033'/$'\033\033'}" '\033' > "$tty" 2>/dev/null || true
   else
     printf '%s' "$osc" > "$tty" 2>/dev/null || true
   fi
@@ -157,21 +196,22 @@ cw_unlock() {
 cw_rename_symbol() {
   local symbol="$1"
   if [ "$total" -gt 0 ]; then
-    tmux rename-window -t "$WINDOW_ID" "${symbol} ${completed}/${active}${label:+ $label}" 2>/dev/null || true
+    cw_rename_transient "${symbol} ${completed}/${active}${label:+ $label}"
   else
-    tmux rename-window -t "$WINDOW_ID" "${symbol} $(cw_workspace)" 2>/dev/null || true
+    cw_rename_transient "${symbol} $(cw_workspace)"
   fi
 }
 
 # Clears task state files. Requires BASE to be set.
 cw_clear_state() {
-  rm -f "${BASE}.total" "${BASE}.completed" "${BASE}.deleted" "${BASE}.label"
+  rm -f "${BASE}.total" "${BASE}.completed" "${BASE}.deleted" "${BASE}.label" \
+    "${BASE}.title" "${BASE}.transient"
 }
 
 # Removes all state for a window key (used for GC of orphaned sessions).
 # Argument: state directory + key prefix (e.g. "$state_dir/claude-window-s0_w1")
 cw_remove_window_state() {
   local prefix="$1"
-  rm -f "${prefix}".{cwd,stopped,total,completed,deleted,label,lock}
+  rm -f "${prefix}".{cwd,stopped,total,completed,deleted,label,title,transient,lock}
   rmdir "${prefix}.lockd" 2>/dev/null || true
 }

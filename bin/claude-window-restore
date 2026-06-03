@@ -14,8 +14,4 @@ else
   desired="$(cw_title)"
 fi
 
-current=$(tmux display-message -t "$WINDOW_ID" -p '#{window_name}' 2>/dev/null || echo "")
-
-if [ "$current" != "$desired" ]; then
-  tmux rename-window -t "$WINDOW_ID" "$desired" 2>/dev/null || true
-fi
+cw_restore_desired "$desired"

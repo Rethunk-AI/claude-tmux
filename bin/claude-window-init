@@ -17,5 +17,5 @@ stopped=$(cat "${BASE}.stopped" 2>/dev/null || echo "")
 if [ "$stored_cwd" != "$PWD" ] || [ -n "$stopped" ]; then
   printf '%s' "$PWD" > "${BASE}.cwd"
   rm -f "${BASE}.stopped"
-  tmux rename-window -t "$WINDOW_ID" "○ $(cw_workspace)" 2>/dev/null || true
+  cw_rename_desired "○ $(cw_workspace)"
 fi
