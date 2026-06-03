@@ -61,7 +61,7 @@ preflight() {
   for c in "${HOME}/.tmux.conf" "${HOME}/.tmux.conf.local"; do
     [ -f "$c" ] || continue
     if grep -Eq '^[[:space:]]*set(-option|w|-window-option)?[[:space:]]+(-[a-zA-Z]+[[:space:]]+)*bell-action[[:space:]]+(none|other)' "$c"; then
-      printf 'Warning: %s sets bell-action to a value other than `any`; permission-prompt bells may not ring.\n' "$c" >&2
+      printf 'Warning: %s sets bell-action to a value other than any; permission-prompt bells may not ring.\n' "$c" >&2
     fi
   done
 }
@@ -120,21 +120,21 @@ INSTRUCTIONS
 
 install_hooks() {
   local hooks_json
-  hooks_json=$(cat <<'HOOKS'
+  hooks_json=$(cat <<HOOKS
 {
   "PreToolUse": [
-    {"matcher": ".*",              "hooks": [{"type": "command", "command": "bash ~/.local/bin/claude-window-init"}]},
-    {"matcher": "AskUserQuestion", "hooks": [{"type": "command", "command": "bash ~/.local/bin/claude-window-ask"}]}
+    {"matcher": ".*",              "hooks": [{"type": "command", "command": "bash ${BIN_DIR}/claude-window-init"}]},
+    {"matcher": "AskUserQuestion", "hooks": [{"type": "command", "command": "bash ${BIN_DIR}/claude-window-ask"}]}
   ],
   "PostToolUse": [
-    {"matcher": "TaskCreate|TaskUpdate", "hooks": [{"type": "command", "command": "bash ~/.local/bin/claude-window-status"}]},
-    {"matcher": ".*",                    "hooks": [{"type": "command", "command": "bash ~/.local/bin/claude-window-restore"}]}
+    {"matcher": "TaskCreate|TaskUpdate", "hooks": [{"type": "command", "command": "bash ${BIN_DIR}/claude-window-status"}]},
+    {"matcher": ".*",                    "hooks": [{"type": "command", "command": "bash ${BIN_DIR}/claude-window-restore"}]}
   ],
-  "Notification": [{"hooks": [{"type": "command", "command": "bash ~/.local/bin/claude-window-notify"}]}],
-  "SubagentStop":  [{"hooks": [{"type": "command", "command": "bash ~/.local/bin/claude-window-subagent"}]}],
-  "SessionStart":  [{"hooks": [{"type": "command", "command": "bash ~/.local/bin/claude-window-session"}]}],
-  "PreCompact":    [{"hooks": [{"type": "command", "command": "bash ~/.local/bin/claude-window-compact"}]}],
-  "Stop":          [{"hooks": [{"type": "command", "command": "bash ~/.local/bin/claude-window-reset"}]}]
+  "Notification": [{"hooks": [{"type": "command", "command": "bash ${BIN_DIR}/claude-window-notify"}]}],
+  "SubagentStop":  [{"hooks": [{"type": "command", "command": "bash ${BIN_DIR}/claude-window-subagent"}]}],
+  "SessionStart":  [{"hooks": [{"type": "command", "command": "bash ${BIN_DIR}/claude-window-session"}]}],
+  "PreCompact":    [{"hooks": [{"type": "command", "command": "bash ${BIN_DIR}/claude-window-compact"}]}],
+  "Stop":          [{"hooks": [{"type": "command", "command": "bash ${BIN_DIR}/claude-window-reset"}]}]
 }
 HOOKS
 )
@@ -142,32 +142,34 @@ HOOKS
   mkdir -p "$(dirname "$SETTINGS")"
   [ -f "$SETTINGS" ] || printf '{}' > "$SETTINGS"
 
-  if jq -e '
-    .hooks // {}
-    | [to_entries[] | .value[]? | .hooks[]? | .command // ""]
-    | any(contains("claude-window-"))
-  ' "$SETTINGS" >/dev/null 2>&1; then
-    printf 'Hooks already present in %s — skipping.\n' "$SETTINGS"
-    return
-  fi
-
   local tmp
   tmp=$(mktemp)
-  if jq -e '.hooks' "$SETTINGS" >/dev/null 2>&1; then
-    # Merge per-event so any foreign hooks block is preserved.
-    jq --argjson h "$hooks_json" '
-      .hooks as $existing
-      | reduce ($h | to_entries[]) as $entry (
-          .;
-          .hooks[$entry.key] = (($existing[$entry.key] // []) + $entry.value)
+  # Merge per-event so foreign hooks are preserved, while adding any newer
+  # claude-tmux hooks that an older install lacks.
+  jq --argjson h "$hooks_json" '
+    def commands($items): [$items[]?.hooks[]?.command // empty];
+    .hooks = (.hooks // {})
+    | reduce ($h | to_entries[]) as $entry (
+        .;
+        .hooks[$entry.key] = (
+          (.hooks[$entry.key] // []) as $existing
+          | (commands($existing)) as $existing_commands
+          | $existing + (
+              $entry.value
+              | map(
+                  (commands([.])) as $candidate_commands
+                  | select(all($candidate_commands[]; . as $cmd | ($existing_commands | index($cmd) | not)))
+                )
+            )
         )
-    ' "$SETTINGS" > "$tmp"
+      )
+  ' "$SETTINGS" > "$tmp"
+  if ! cmp -s "$SETTINGS" "$tmp"; then
     mv "$tmp" "$SETTINGS"
-    printf 'Hooks merged into existing hooks block in %s\n' "$SETTINGS"
+    printf 'Hooks merged into %s\n' "$SETTINGS"
   else
-    jq --argjson h "$hooks_json" '. + {hooks: $h}' "$SETTINGS" > "$tmp"
-    mv "$tmp" "$SETTINGS"
-    printf 'Hooks added to %s\n' "$SETTINGS"
+    rm "$tmp"
+    printf 'Hooks already current in %s\n' "$SETTINGS"
   fi
 }
 
@@ -218,7 +220,7 @@ cmd_uninstall() {
   if [ -f "$SETTINGS" ]; then
     if ! command -v jq >/dev/null 2>&1; then
       printf 'Warning: jq not found — skipping %s hook cleanup.\n' "$SETTINGS" >&2
-      printf '         Remove any line containing `claude-window-` by hand.\n\n' >&2
+      printf '         Remove any line containing claude-window- by hand.\n\n' >&2
     else
       local tmp
       tmp=$(mktemp)

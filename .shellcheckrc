@@ -6,5 +6,6 @@
 # SC2034 - unused variables (sourced globals are "unused" in lib context)
 # SC2154 - undefined variables (sourced globals from lib)
 
-# Enable strict checking for all shell files
-disable=SC1091
+# Enable strict checking for all shell files, while allowing dynamically sourced
+# hook state globals from bin/claude-window-lib.
+disable=SC1091,SC2154

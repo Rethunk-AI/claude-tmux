@@ -9,8 +9,7 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FAKE_HOME="$(mktemp -d -t claude-tmux-io.XXXXXX)"
-cleanup() { rm -rf "$FAKE_HOME"; }
-trap cleanup EXIT
+trap 'rm -rf "$FAKE_HOME"' EXIT
 
 export HOME="$FAKE_HOME"
 export CLAUDE_TMUX_STATE_DIR="$FAKE_HOME/.local/state/claude-tmux"
