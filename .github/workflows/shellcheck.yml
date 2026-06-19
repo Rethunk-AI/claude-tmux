@@ -12,7 +12,7 @@ jobs:
   shellcheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install ShellCheck
         run: sudo apt-get update && sudo apt-get install -y shellcheck
@@ -43,7 +43,7 @@ jobs:
   smoke:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install runtime dependencies
         run: sudo apt-get update && sudo apt-get install -y jq fzf tmux
@@ -57,7 +57,7 @@ jobs:
   smoke-macos:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       # Install bash >= 4 plus the runtime deps, but keep the BSD userland
       # (awk, date, find, sed) so this job genuinely exercises the macOS code
